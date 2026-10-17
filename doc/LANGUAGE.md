@@ -79,7 +79,7 @@ The supported operators, from lowest to highest precedence, are:
 
 | Precedence | Operators |
 | --- | --- |
-| 1 | `OR`, `||` |
+| 1 | `OR`, `\|\|` |
 | 2 | `AND`, `&&` |
 | 3 | `==`, `!=`, `EQ`, `NEQ` |
 | 4 | `<`, `<=`, `>`, `>=`, `LT`, `LTE`, `GT`, `GTE` |
