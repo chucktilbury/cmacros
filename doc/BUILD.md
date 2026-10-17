@@ -34,8 +34,10 @@ ctest --test-dir build --output-on-failure
 
 The executable is written under `bin/`. CTest launches the actual Cwhip
 executable through `tests/test_cli.py` and installs/relocates it in a temporary
-prefix through `tests/test_install.py`. The suite does not fetch dependencies
-or access the network.
+prefix through `tests/test_install.py`. It also verifies the 16 preserved
+upstream examples using `examples/run_examples.py`; see
+[the examples guide](../examples/README.md). The suite does not fetch
+dependencies or access the network.
 
 ## Install and relocate
 

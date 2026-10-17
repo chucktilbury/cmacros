@@ -1,0 +1,12 @@
+/****************
+ * This is a test....
+ */
+
+.define nuggplart (one, two, three) {
+
+    this is the nugg: @some_name
+    @one
+    @two
+    @three
+}
+

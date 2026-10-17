@@ -1,0 +1,10 @@
+
+/****************************
+ * This is the included file
+ */
+
+.include "test3"
+.define floop(asdf, zoom, plart) {
+This is some @asdf that belongs in the @zoom when floop is @plart.
+}
+

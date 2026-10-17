@@ -1,0 +1,27 @@
+
+/*
+    Testing nested if statements.
+*/
+
+this is in the output always
+
+.define name1
+.define name2
+
+.if (name1) {
+
+    this text is in
+    .if (name2) {
+        this text is in
+        .if(name3) {
+            this text is out
+        }
+        after name 2
+    }
+    after the nested if
+}
+.else {
+    never in the output
+}
+
+after the main if

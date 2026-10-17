@@ -1,0 +1,15 @@
+
+/*
+    Text macro expansion with parameters.
+*/
+
+.define one {100}
+.define two {200}
+
+.define three ( one, two) {
+300
+@one
+@two
+}
+
+@three ( 3001, 3002)

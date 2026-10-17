@@ -1,0 +1,24 @@
+/*
+ * test macro expansions.
+ */
+
+.define one {100}
+.define two {200}
+.define three {
+some text
+300
+}
+
+.define mac1 (one, two, three) {
+this is the text
+@one
+@two
+@three
+}
+
+@mac1(qwert, asdfg, @three)
+
+some more text
+@one
+@two
+@three

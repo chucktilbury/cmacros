@@ -1,0 +1,4 @@
+
+.define symbol{123}
+
+this is the @symbol with space

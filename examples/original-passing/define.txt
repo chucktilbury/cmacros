@@ -1,0 +1,42 @@
+/*
+    Test the define directive.
+*/
+
+before the one.
+
+.define blart {wertiusow}
+
+.define one
+
+with a floating number: 123.3487e-12
+
+.define two {100}
+
+// another comment
+
+.define three() {
+200 @two//
+} // another comment
+
+before the four
+
+.define four ( one, two, three ) {
+1234
+@one
+@two
+@three
+}
+
+    after the four
+
+this is@one not there
+
+definition of two is @two
+
+there are more than @three bugs.
+
+@four(qwert,flarp,blart)
+
+but one still exists: "@one"
+but two still exists: "@two"
+but three still exists: "@three"

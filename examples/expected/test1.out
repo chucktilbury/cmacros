@@ -1,0 +1,19 @@
+after some_name
+after the import
+raw text in the output
+after define other_name and before the import
+this is some text
+in the IF body
+102
+this is the nugg:
+init_cmdline("template", "template project", "0.1");
+add_cmdline('v', "verbosity", "verbosity", "From 0 to 10. Print more information", "0", NULL, CMD_NUM | CMD_ARGS);
+add_cmdline('I', NULL, "path", "Add to the import path", "", NULL, CMD_STR | CMD_ARGS | CMD_LIST);
+add_cmdline('D', NULL, "defs", "Define a variable", "", NULL, CMD_STR | CMD_ARGS | CMD_LIST);
+add_cmdline('h', "help", NULL, "Print this helpful information", NULL, cmdline_help, CMD_NONE);
+add_cmdline('V', "version", NULL, "Show the program version", NULL, cmdline_vers, CMD_NONE);
+add_cmdline(0, NULL, NULL, NULL, NULL, NULL, CMD_DIV);
+add_cmdline(0, NULL, "files", "File name(s) to input", NULL, NULL, CMD_REQD | CMD_ANON);
+This is some zoob that belongs in the klap when floop is flonk.
+123
+ksjdhfkjhsdf

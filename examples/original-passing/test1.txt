@@ -1,0 +1,50 @@
+/*
+    This is a multi-line
+
+ */
+
+.define some_name {
+    init_cmdline("template", "template project", "0.1");
+    add_cmdline('v', "verbosity", "verbosity", "From 0 to 10. Print more information", "0", NULL, CMD_NUM | CMD_ARGS);
+    add_cmdline('I', NULL, "path", "Add to the import path", "", NULL, CMD_STR | CMD_ARGS | CMD_LIST);
+    add_cmdline('D', NULL, "defs", "Define a variable", "", NULL, CMD_STR | CMD_ARGS | CMD_LIST);
+    add_cmdline('h', "help", NULL, "Print this helpful information", NULL, cmdline_help, CMD_NONE);
+    add_cmdline('V', "version", NULL, "Show the program version", NULL, cmdline_vers, CMD_NONE);
+    add_cmdline(0, NULL, NULL, NULL, NULL, NULL, CMD_DIV);
+    add_cmdline(0, NULL, "files", "File name(s) to input", NULL, NULL, CMD_REQD | CMD_ANON);
+}
+after some_name
+
+// single line comment
+.import "test2"
+after the import
+
+raw text in the output
+
+.define other_name {100}
+
+after define other_name and before the import
+
+.define gubbers  {100}
+
+.if( gubbers and @other_name ) {
+
+    this is some text
+    in the IF body
+    .if(@other_name) {
+        .define a_name {
+            102
+        }
+        @a_name
+    }
+
+} .else (@gubbers) {
+    this is text inside the @gubbers else
+} .else {
+    this is text inside the true else
+}
+
+@nuggplart(@floop(zoob,klap,flonk), 123, ksjdhfkjhsdf)
+
+
+

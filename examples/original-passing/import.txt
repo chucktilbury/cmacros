@@ -1,0 +1,7 @@
+/*
+    Test .import directive.
+*/
+
+before input
+.import "import1.txt"
+after input

@@ -1,0 +1,29 @@
+/*
+ * More complicate parameter expansion.
+ */
+
+.define one {100}
+.define two {200}
+.define three {this is the three @one @two}
+
+.define mac1(one,two,three) {
+    @one
+    @two
+    @three
+}
+
+
+@one
+
+@two
+
+@three
+
+@mac1(@one, @two, @three)
+
+// this is a single liner
+
+@one
+
+// this is a single liner
+
