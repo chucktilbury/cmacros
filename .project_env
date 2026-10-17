@@ -1,0 +1,10 @@
+if [[ -r "$HOME/.bashrc" ]]; then
+    source "$HOME/.bashrc"
+fi
+project_path="$_PROJECT_LOC/bin:$_PROJECT_LOC/scripts"
+if [[ -n "${CWHIP_SDK:-}" ]]; then
+    project_path+=":$CWHIP_SDK/bin"
+fi
+export PATH="$project_path:$PATH"
+PS1="\[\e[0;31;1m\]${_PROJECT_NAME}(${_BUILD_TYPE}):\[\e[0m\]${PS1:-\\u@\\h:\\w\\$ }"
+cd -- "$_PROJECT_LOC/build"
