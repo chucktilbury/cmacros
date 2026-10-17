@@ -59,6 +59,8 @@ class LiteralValue {
 class Processor {
     list macros
     list includePaths
+    list cachedPaths
+    list cachedContents
     list currentImports
     list currentTrace
     bool failed
@@ -73,6 +75,8 @@ class Processor {
     Processor(list paths) {
         macros = []
         includePaths = paths
+        cachedPaths = []
+        cachedContents = []
         currentImports = []
         currentTrace = []
         failed = false
@@ -247,6 +251,14 @@ class Processor {
     }
 
     String readFile(String path, int line) {
+        int cacheIndex = 0
+        while (cacheIndex < cachedPaths.length) {
+            String cachedPath = cachedPaths[cacheIndex] as String
+            if (cachedPath.equals(path)) {
+                return cachedContents[cacheIndex] as String
+            }
+            cacheIndex = cacheIndex + 1
+        }
         int size = Sys.FileSystem().fileSize(path)
         if (size > 16777216) {
             report(2001, path, line, 1, "input exceeds the 16 MiB source limit")
@@ -260,7 +272,15 @@ class Processor {
         } except() as message {
             report(2000, path, line, 1, format("cannot read input: {}", message))
         }
+        if (not failed) {
+            cachedPaths.append(path)
+            cachedContents.append(content)
+        }
         return content
+    }
+
+    int definitionCount() {
+        return macros.length
     }
 
     String resolveImport(String currentFile, String requested) {
@@ -1598,16 +1618,18 @@ class Processor {
     }
 
     String process(String input) {
-        Sys.FileSystem fs = Sys.FileSystem()
         String previous = ""
         String result = ""
         int pass = 0
         while (pass < 256 and not failed) {
             work = 0
+            int definitionsBeforePass = definitionCount()
             list imports = []
             list active = []
             result = processFile(input, imports, active, 0)
-            if (failed or (pass > 0 and result.equals(previous))) {
+            bool definitionsStable = definitionCount() == definitionsBeforePass
+            if (failed or (pass > 0 and definitionsStable and
+                           result.equals(previous))) {
                 return result
             }
             previous = result

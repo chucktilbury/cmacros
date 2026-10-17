@@ -92,11 +92,13 @@ compared by truth value (false before true), not lexically. All operands are
 evaluated; logical operators do not short-circuit. Malformed expressions
 produce source diagnostics rather than silently choosing a branch.
 
-Macro definitions are collected through bounded repeated passes, allowing
-forward references in ordinary text and conditions. Each pass starts from
-the original input; processing stops when two successive outputs match.
-Definitions made in a selected body or imported file participate in later
-passes.
+Macro definitions are retained across bounded repeated passes, allowing
+forward references in ordinary text and conditions. Every pass processes the
+original input and imported source snapshot. Processing stops only after two
+successive outputs match and the latest pass added no definitions. Thus an
+unchanged output does not hide a newly defined name that may select a branch
+on the next pass. Definitions made in a selected body or imported file
+participate in later passes.
 
 ## Comments, strings, and escapes
 

@@ -87,6 +87,18 @@ def test_forward_references_and_conditionals(root):
             f"undefined conditional names should be false: {result!r}")
 
     source.write_text(
+        ".if (M2) {.define OUT {ready}}\n"
+        ".if (M1) {.define M2}\n"
+        ".define M1\n"
+        "@OUT\n",
+        encoding="utf-8",
+    )
+    result = invoke(source)
+    require(result.returncode == 0 and "ready" in result.stdout and
+            "@OUT" not in result.stdout,
+            f"silent conditional definitions did not reach a fixed point: {result!r}")
+
+    source.write_text(
         ".define echo(value) {@value}\n"
         ".define predicate(value) {1}\n"
         ".if (@echo(1) == 1) {condition macro call}\n"
