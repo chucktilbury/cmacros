@@ -1,0 +1,13 @@
+/*
+    Text macro reference arity.
+*/
+
+.define a_name(one, two, three) {
+    @one
+    @two
+    @three
+}
+
+@a_name(   larry   , "moe", shimp
+)
+

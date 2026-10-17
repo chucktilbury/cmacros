@@ -69,6 +69,9 @@ get_target_property(cmacros_executable cmacros CWHIP_EXECUTABLE)
 install(PROGRAMS "${cmacros_executable}" DESTINATION bin)
 
 if(BUILD_TESTING)
+    add_test(NAME cmacros-original-examples
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/examples/run_examples.py"
+            "${cmacros_executable}")
     add_test(NAME cmacros-conformance
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cli.py"
             "${cmacros_executable}")

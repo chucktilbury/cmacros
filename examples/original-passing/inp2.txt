@@ -1,0 +1,12 @@
+
+/*
+    This file is intended to be included
+ */
+unkey bunkey
+.define this_is_a_macro {
+    abc
+    cde
+    @another
+}
+
+.nope

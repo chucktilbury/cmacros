@@ -45,6 +45,15 @@ print to standard output. The legacy `-v N` option is accepted and ignored.
 See [doc/LANGUAGE.md](doc/LANGUAGE.md) for the language contract and
 [doc/DIAGNOSTICS.md](doc/DIAGNOSTICS.md) for errors and processing limits.
 
+## Original examples
+
+The original macros repository's 16 passing examples and import/support
+files are preserved in [`examples/original-passing`](examples/original-passing).
+Run one with `bin/cmacros examples/original-passing/define.txt`, or check all
+expected outputs with `python3 examples/run_examples.py`. The suite also runs
+through CTest. See [examples/README.md](examples/README.md) for provenance,
+expected behavior, and comparison rules.
+
 ## Example
 
 ```c

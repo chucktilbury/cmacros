@@ -1,0 +1,44 @@
+
+/*
+ This is a comment
+ */
+( 30 + 2 ) / 5 // this is a comment
+
+/* multi */
+
+moochie capesta
+
+.import "inp2.txt"
+
+
+.if (goobers) {
+    this is the text inside the if
+}.else {
+    This is the text inside the else
+}
+
+// define this...
+.define another { some random text }
+
+
+.define some_name {
+    // comments included
+
+        this {
+            @another
+        }
+        some
+    @number @eight
+    text
+}
+
+@some_name@1
+ugly bugly
+
+.define x {some other stupid}
+
+.if(1) {nuckles drag}
+
+
+
+plart!
