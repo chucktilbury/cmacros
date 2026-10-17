@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -o errexit -o nounset -o pipefail
+
+if [[ -n "${_PROJECT_NAME:-}" ]]; then
+    printf 'A project shell is already active (%s). Exit it before starting another.\n' \
+        "$_PROJECT_NAME" >&2
+    exit 1
+fi
+
+if (( $# > 1 )); then
+    printf 'Usage: %s [debug|release|profile]\n' "$0" >&2
+    exit 2
+fi
+
+build_type="${1:-debug}"
+case "$build_type" in
+    debug) cmake_build_type=Debug ;;
+    release) cmake_build_type=Release ;;
+    profile) cmake_build_type=RelWithDebInfo ;;
+    *)
+        printf 'Unknown build type: %s\nUsage: %s [debug|release|profile]\n' \
+            "$build_type" "$0" >&2
+        exit 2
+        ;;
+esac
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+build_dir="$project_root/build"
+if [[ -z "${CWHIP_SDK:-}" ]]; then
+    config_home="${XDG_CONFIG_HOME:-}"
+    if [[ -z "$config_home" && -n "${HOME:-}" ]]; then
+        config_home="$HOME/.config"
+    fi
+    if [[ -n "$config_home" && "$config_home" != /* ]]; then
+        printf "Cannot discover sdk_prefix: config home '%s' is not absolute.\n" \
+            "$config_home" >&2
+        exit 1
+    fi
+    settings="$config_home/cwhip/settings.toml"
+    if [[ -n "$config_home" && -e "$settings" ]]; then
+        sdk_prefix="$(python3 "$project_root/scripts/sdk-prefix.py" "$settings")"
+        if [[ -n "$sdk_prefix" ]]; then
+            export CWHIP_SDK="$sdk_prefix"
+        fi
+    fi
+fi
+
+export _PROJECT_LOC="$project_root"
+export _PROJECT_NAME="$(basename -- "$project_root")"
+export _BUILD_TYPE="$build_type"
+export CWHIP_BUILD_TYPE="$cmake_build_type"
+cmake -S "$project_root" -B "$build_dir" -DCMAKE_BUILD_TYPE="$cmake_build_type"
+bash --rcfile "$project_root/.project_env" -i
