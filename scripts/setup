@@ -27,9 +27,11 @@ esac
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 build_dir="$project_root/build"
-sdk_prefix="$(python3 "$project_root/scripts/sdk-prefix.py")"
-if [[ -n "$sdk_prefix" ]]; then
-    export CWHIP_SDK="$sdk_prefix"
+if [[ -z "${CWHIP_SDK:-}" ]]; then
+    sdk_prefix="$(python3 "$project_root/scripts/sdk-prefix.py")"
+    if [[ -n "$sdk_prefix" ]]; then
+        export CWHIP_SDK="$sdk_prefix"
+    fi
 fi
 
 export _PROJECT_LOC="$project_root"

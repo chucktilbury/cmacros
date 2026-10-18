@@ -232,6 +232,10 @@ class DiscoveryTests(unittest.TestCase):
         result = subprocess.run(setup, env=self.env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(log.read_text(), str(self.other))
+        self.env["CWHIP_SDK"] = str(self.other) + "\n"
+        result = subprocess.run(setup, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(log.read_text(), self.env["CWHIP_SDK"])
 
 
 if __name__ == "__main__":
