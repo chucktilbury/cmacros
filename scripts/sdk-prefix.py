@@ -6,7 +6,36 @@ import sys
 
 
 def main():
-    settings = Path(sys.argv[1])
+    prefix = os.environ.get("CWHIP_SDK", "")
+    if prefix:
+        sys.stdout.write(prefix)
+        return 0
+
+    config_home = os.environ.get("XDG_CONFIG_HOME", "")
+    if not config_home and os.environ.get("HOME"):
+        config_home = os.path.join(os.environ["HOME"], ".config")
+    if not config_home:
+        return 0
+    if not os.path.isabs(config_home):
+        print(f"Cannot discover sdk_prefix: config home '{config_home}' is not absolute",
+              file=sys.stderr)
+        return 1
+
+    settings = Path(config_home) / "cwhip" / "sdk.toml"
+    try:
+        for name in ("sdk.toml", "settings.toml"):
+            settings = Path(config_home) / "cwhip" / name
+            try:
+                settings.lstat()
+                break
+            except FileNotFoundError:
+                continue
+        else:
+            return 0
+    except OSError as error:
+        print(f"{settings}: cannot read sdk_prefix: {error}", file=sys.stderr)
+        return 1
+
     try:
         import tomllib
     except ModuleNotFoundError:
@@ -26,8 +55,6 @@ def main():
             raise ValueError(
                 "sdk_prefix must be a non-empty absolute path to an existing SDK "
                 "installation directory (without NUL or line breaks)")
-    except FileNotFoundError:
-        return 0
     except (OSError, ValueError) as error:
         print(f"{settings}: cannot read sdk_prefix: {error}", file=sys.stderr)
         return 1
