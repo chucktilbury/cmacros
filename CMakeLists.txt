@@ -22,31 +22,13 @@ foreach(configuration DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${configuration} "${CWHIP_LIB_DIR}")
 endforeach()
 
-set(cwhip_sdk_prefix "$ENV{CWHIP_SDK}")
-if(cwhip_sdk_prefix STREQUAL "")
-    set(cwhip_config_home "$ENV{XDG_CONFIG_HOME}")
-    if(cwhip_config_home STREQUAL "" AND NOT "$ENV{HOME}" STREQUAL "")
-        set(cwhip_config_home "$ENV{HOME}/.config")
-    endif()
-    if(NOT cwhip_config_home STREQUAL "")
-        if(NOT IS_ABSOLUTE "${cwhip_config_home}")
-            message(FATAL_ERROR
-                "Cannot discover sdk_prefix: config home '${cwhip_config_home}' is not absolute")
-        endif()
-        set(cwhip_settings "${cwhip_config_home}/cwhip/settings.toml")
-        file(GLOB cwhip_settings_entries "${cwhip_config_home}/cwhip/*")
-        if("${cwhip_settings}" IN_LIST cwhip_settings_entries)
-            execute_process(
-                COMMAND "${Python3_EXECUTABLE}"
-                    "${PROJECT_SOURCE_DIR}/scripts/sdk-prefix.py" "${cwhip_settings}"
-                RESULT_VARIABLE cwhip_settings_result
-                OUTPUT_VARIABLE cwhip_sdk_prefix
-                ERROR_VARIABLE cwhip_settings_error)
-            if(NOT cwhip_settings_result STREQUAL "0")
-                message(FATAL_ERROR "${cwhip_settings_error}")
-            endif()
-        endif()
-    endif()
+execute_process(
+    COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/sdk-prefix.py"
+    RESULT_VARIABLE cwhip_settings_result
+    OUTPUT_VARIABLE cwhip_sdk_prefix
+    ERROR_VARIABLE cwhip_settings_error)
+if(NOT cwhip_settings_result STREQUAL "0")
+    message(FATAL_ERROR "${cwhip_settings_error}")
 endif()
 
 if(NOT cwhip_sdk_prefix STREQUAL "")
@@ -69,6 +51,9 @@ get_target_property(cmacros_executable cmacros CWHIP_EXECUTABLE)
 install(PROGRAMS "${cmacros_executable}" DESTINATION bin)
 
 if(BUILD_TESTING)
+    add_test(NAME cmacros-sdk-discovery
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_sdk_discovery.py"
+            "${CMAKE_COMMAND}")
     add_test(NAME cmacros-original-examples
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/examples/run_examples.py"
             "${cmacros_executable}")
