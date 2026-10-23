@@ -4,7 +4,8 @@
 
 - CMake 3.24+
 - Python 3.11+ (used for SDK configuration discovery and black-box tests)
-- Cwhip SDK 0.0.1, including application output-directory support
+- Cwhip SDK 0.0.1, including application output-directory support and
+  `cwhip_apply_application_defaults()`
 
 The build uses Cwhip's `cwhip_add_program` and its static runtime. Macro
 processing is implemented in `src/main.cw`; Python is used only as the test
@@ -27,6 +28,10 @@ directory, without NUL, CR, or LF characters:
 
 ```toml
 sdk_prefix = "/absolute/path/to/cwhip-sdk"
+
+[applications]
+install_prefix = "/absolute/path/to/application/install"
+build_type = "RelWithDebInfo"
 ```
 
 Discovery is read-only and never rewrites or migrates user configuration.
@@ -37,16 +42,36 @@ a prefix, CMake uses normal package discovery. An explicitly selected SDK is
 required to work: it cannot silently fall back to another SDK or a cached
 `Cwhip_DIR` from an earlier configuration. The project
 requires the exact SDK version 0.0.1 and fails configuration if the
-application output-directory capability is missing.
+application output-directory capability or application-defaults helper is missing.
+
+## Application defaults
+
+SDK discovery, `find_package(Cwhip ...)`, and
+`cwhip_apply_application_defaults()` run before `project()`. The shared SDK
+helper seeds `CMAKE_INSTALL_PREFIX` and `CMAKE_BUILD_TYPE` from `[applications]`
+in `sdk.toml` only for the matching selected SDK and absent cache entries.
+Explicit `-D` values (including `/usr/local` and an empty build type),
+`CMAKE_INSTALL_PREFIX`/`CMAKE_BUILD_TYPE` environment choices, and existing
+cache values take precedence. Defaults are not read from legacy `settings.toml`.
+The `CMAKE_INSTALL_PREFIX` environment override requires CMake 3.29 or newer;
+with older CMake versions, use `-DCMAKE_INSTALL_PREFIX=...` instead.
+
+The SDK installer registers these defaults from its actual installation
+prefix and build configuration; `DESTDIR` staging does not register staged
+paths. Consumers do not share the SDK build directory or inherit arbitrary
+compiler flags. cmacros never installs into the SDK during configuration.
 
 The repository's `scripts/setup` opens a project shell and configures the
-`build` directory. It accepts `debug`, `release`, or `profile`; set
-`CWHIP_SDK` first when the SDK is outside normal discovery.
+`build` directory. With no argument it inherits the SDK default or retains the
+cached build type. Explicit `debug`, `release`, or `profile` arguments pass
+`Debug`, `Release`, or `RelWithDebInfo` as overrides; set `CWHIP_SDK` first when
+the SDK is outside normal discovery. The shell exports the configured type as
+`CWHIP_BUILD_TYPE` and its lowercase mode as `_BUILD_TYPE` (`default` when empty).
 
 ## Build and test
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```

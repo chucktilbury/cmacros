@@ -13,8 +13,9 @@ if (( $# > 1 )); then
     exit 2
 fi
 
-build_type="${1:-debug}"
+build_type="${1:-}"
 case "$build_type" in
+    "") cmake_build_type="" ;;
     debug) cmake_build_type=Debug ;;
     release) cmake_build_type=Release ;;
     profile) cmake_build_type=RelWithDebInfo ;;
@@ -36,7 +37,20 @@ fi
 
 export _PROJECT_LOC="$project_root"
 export _PROJECT_NAME="$(basename -- "$project_root")"
+cmake_args=()
+if [[ -n "$cmake_build_type" ]]; then
+    cmake_args+=("-DCMAKE_BUILD_TYPE=$cmake_build_type")
+fi
+cmake -S "$project_root" -B "$build_dir" "${cmake_args[@]}"
+
+cmake_build_type="$(sed -n 's/^CMAKE_BUILD_TYPE:[^=]*=//p' "$build_dir/CMakeCache.txt" | head -n 1)"
+case "$cmake_build_type" in
+    Debug) build_type=debug ;;
+    Release) build_type=release ;;
+    RelWithDebInfo) build_type=profile ;;
+    "") build_type=default ;;
+    *) build_type="${cmake_build_type,,}" ;;
+esac
 export _BUILD_TYPE="$build_type"
 export CWHIP_BUILD_TYPE="$cmake_build_type"
-cmake -S "$project_root" -B "$build_dir" -DCMAKE_BUILD_TYPE="$cmake_build_type"
 bash --rcfile "$project_root/.project_env" -i

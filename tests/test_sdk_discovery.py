@@ -34,6 +34,8 @@ class DiscoveryTests(unittest.TestCase):
                         _PROJECT_NAME="")
         self.env.pop("Cwhip_DIR", None)
         self.env.pop("CMAKE_PREFIX_PATH", None)
+        self.env.pop("CMAKE_INSTALL_PREFIX", None)
+        self.env.pop("CMAKE_BUILD_TYPE", None)
 
     def make_sdk(self, name):
         prefix = self.root / name
@@ -50,6 +52,27 @@ class DiscoveryTests(unittest.TestCase):
             '  add_custom_target(${name})\n'
             '  set_target_properties(${name} PROPERTIES '
             'CWHIP_EXECUTABLE "${CMAKE_COMMAND}")\n'
+            'endfunction()\n'
+            'include("${CMAKE_CURRENT_LIST_DIR}/ApplicationDefaults.cmake")\n',
+            encoding="utf-8")
+        # Stand-in for the SDK-owned helper: enforce the consumer call order.
+        (package / "ApplicationDefaults.cmake").write_text(
+            'function(cwhip_apply_application_defaults)\n'
+            '  if(DEFINED PROJECT_NAME OR CMAKE_C_COMPILER_LOADED)\n'
+            '    message(FATAL_ERROR "Application defaults must precede project()")\n'
+            '  endif()\n'
+            '  if(NOT DEFINED CMAKE_INSTALL_PREFIX AND "$ENV{CMAKE_INSTALL_PREFIX}" STREQUAL "")\n'
+            f'    set(CMAKE_INSTALL_PREFIX "{self.root}/applications" CACHE PATH "")\n'
+            '  endif()\n'
+            '  get_property(cached CACHE CMAKE_BUILD_TYPE PROPERTY TYPE SET)\n'
+            '  if(NOT cached AND NOT CMAKE_CONFIGURATION_TYPES)\n'
+            '    if(DEFINED ENV{CMAKE_BUILD_TYPE})\n'
+            '      set(value "$ENV{CMAKE_BUILD_TYPE}")\n'
+            '    else()\n'
+            '      set(value "RelWithDebInfo")\n'
+            '    endif()\n'
+            '    set(CMAKE_BUILD_TYPE "${value}" CACHE STRING "")\n'
+            '  endif()\n'
             'endfunction()\n', encoding="utf-8")
         return prefix
 
@@ -73,17 +96,97 @@ class DiscoveryTests(unittest.TestCase):
         self.assertIn(filename, result.stderr)
         self.assertIn("cannot read sdk_prefix", result.stderr)
 
-    def configure(self, build="build"):
+    def configure(self, build="build", extra=()):
         return subprocess.run(
             [CMAKE, "-S", str(PROJECT), "-B", str(self.root / build),
-             f"-DCMAKE_PREFIX_PATH={self.other}", "-DBUILD_TESTING=OFF"],
+             f"-DCMAKE_PREFIX_PATH={self.other}", "-DBUILD_TESTING=OFF", *extra],
             env=self.env, capture_output=True, text=True)
 
-    def assert_configured(self, expected, build="build"):
-        result = self.configure(build)
+    def assert_configured(self, expected, build="build", extra=()):
+        result = self.configure(build, extra)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((self.root / build / "selected-sdk.txt").read_text(),
                          str(expected))
+
+    def assert_cache(self, prefix, build_type, build="build"):
+        cache = (self.root / build / "CMakeCache.txt").read_text()
+        self.assertIn(f"CMAKE_INSTALL_PREFIX:PATH={prefix}\n", cache)
+        self.assertIn(f"CMAKE_BUILD_TYPE:STRING={build_type}\n", cache)
+
+    def test_defaults_are_applied_before_project(self):
+        self.assert_configured(self.other)
+        self.assert_cache(self.root / "applications", "RelWithDebInfo")
+
+    def test_explicit_and_cached_values_override_defaults(self):
+        for index, (prefix, build_type) in enumerate((
+                ("/usr/local", ""), (str(self.root / "explicit"), "Debug"),
+                ("", ""))):
+            with self.subTest(prefix=prefix, build_type=build_type):
+                build = f"override-{index}"
+                self.assert_configured(self.other, build, (
+                    f"-DCMAKE_INSTALL_PREFIX={prefix}",
+                    f"-DCMAKE_BUILD_TYPE={build_type}"))
+                self.assert_cache(prefix, build_type, build)
+                self.env["CMAKE_BUILD_TYPE"] = "Release"
+                self.assert_configured(self.other, build)
+                self.assert_cache(prefix, build_type, build)
+                self.env.pop("CMAKE_BUILD_TYPE")
+
+    def test_build_type_environment_including_empty(self):
+        for index, value in enumerate(("Debug", "")):
+            with self.subTest(value=value):
+                self.env["CMAKE_BUILD_TYPE"] = value
+                build = f"environment-{index}"
+                self.assert_configured(self.other, build)
+                self.assert_cache(self.root / "applications", value, build)
+
+    def test_install_prefix_environment(self):
+        version = subprocess.run([CMAKE, "--version"], capture_output=True,
+                                 text=True, check=True).stdout.split()[2]
+        if tuple(map(int, version.split(".")[:2])) < (3, 29):
+            self.skipTest("CMAKE_INSTALL_PREFIX environment requires CMake 3.29+")
+        self.env["CMAKE_INSTALL_PREFIX"] = str(self.root / "environment")
+        self.assert_configured(self.other)
+        self.assert_cache(self.root / "environment", "RelWithDebInfo")
+
+    def test_missing_application_defaults_helper_is_actionable(self):
+        (self.other / "lib/cmake/Cwhip/ApplicationDefaults.cmake").write_text("")
+        result = self.configure()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cwhip_apply_application_defaults()", result.stderr)
+
+    def test_setup_modes_and_cached_shell_environment(self):
+        project = self.root / "project"
+        shutil.copytree(PROJECT / "scripts", project / "scripts")
+        shutil.copy2(PROJECT / "CMakeLists.txt", project / "CMakeLists.txt")
+        tools = self.root / "tools"
+        tools.mkdir()
+        log = self.root / "shell-type"
+        shell = tools / "bash"
+        shell.write_text(
+            f'#!/bin/sh\nprintf "%s:%s" "$_BUILD_TYPE" "$CWHIP_BUILD_TYPE" > "{log}"\n')
+        shell.chmod(0o755)
+        self.env["PATH"] = str(tools) + os.pathsep + self.env["PATH"]
+        self.write_prefix(self.new, self.sdk)
+        for arguments, expected in (
+                ((), "profile:RelWithDebInfo"), (("debug",), "debug:Debug"),
+                ((), "debug:Debug"), (("release",), "release:Release"),
+                (("profile",), "profile:RelWithDebInfo")):
+            with self.subTest(arguments=arguments, expected=expected):
+                result = subprocess.run(
+                    ["/bin/bash", str(project / "scripts/setup"), *arguments],
+                    env=self.env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(log.read_text(), expected)
+        result = subprocess.run(
+            [CMAKE, "-S", str(project), "-B", str(project / "build"),
+             "-DCMAKE_BUILD_TYPE="], env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = subprocess.run(
+            ["/bin/bash", str(project / "scripts/setup")], env=self.env,
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(log.read_text(), "default:")
 
     def test_new_over_legacy_and_preferences_rewrite(self):
         self.write_prefix(self.new, self.sdk)
@@ -200,6 +303,8 @@ class DiscoveryTests(unittest.TestCase):
         project = self.root / "project"
         scripts = project / "scripts"
         scripts.mkdir(parents=True)
+        (project / "build").mkdir()
+        (project / "build/CMakeCache.txt").write_text("CMAKE_BUILD_TYPE:STRING=\n")
         for name in ("setup", "sdk-prefix.py"):
             shutil.copy2(PROJECT / "scripts" / name, scripts / name)
         tools = self.root / "tools"
