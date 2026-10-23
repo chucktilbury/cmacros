@@ -13,9 +13,12 @@ normal CMake package search path. Otherwise CMake reads `sdk_prefix` from
 `$XDG_CONFIG_HOME/cwhip/sdk.toml` (or `$HOME/.config/cwhip/sdk.toml` when
 `XDG_CONFIG_HOME` is unset or empty). Only when `sdk.toml` is absent does it
 consult the legacy `settings.toml` in that same directory.
+The SDK must provide `cwhip_apply_application_defaults()`. Fresh builds inherit
+the matching SDK's registered application install prefix and build type;
+explicit CMake options, environment choices, and existing caches take precedence.
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 cmake --install build --prefix "$HOME/.local"

@@ -1,8 +1,33 @@
 cmake_minimum_required(VERSION 3.24)
+
+find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
+execute_process(
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/sdk-prefix.py"
+    RESULT_VARIABLE cwhip_settings_result
+    OUTPUT_VARIABLE cwhip_sdk_prefix
+    ERROR_VARIABLE cwhip_settings_error)
+if(NOT cwhip_settings_result STREQUAL "0")
+    message(FATAL_ERROR "${cwhip_settings_error}")
+endif()
+
+if(NOT cwhip_sdk_prefix STREQUAL "")
+    unset(Cwhip_DIR CACHE)
+    unset(Cwhip_DIR)
+    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED
+        PATHS "${cwhip_sdk_prefix}" NO_DEFAULT_PATH)
+else()
+    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED)
+endif()
+if(NOT COMMAND cwhip_apply_application_defaults)
+    message(FATAL_ERROR
+        "The selected Cwhip SDK does not provide application install/build defaults. "
+        "Install an SDK that provides cwhip_apply_application_defaults().")
+endif()
+cwhip_apply_application_defaults()
+
 project(cmacros VERSION 1.0 LANGUAGES C)
 
 include(CTest)
-find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 
 set(CWHIP_BIN_DIR "${PROJECT_SOURCE_DIR}/bin" CACHE PATH
     "Directory for project executables")
@@ -22,23 +47,6 @@ foreach(configuration DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${configuration} "${CWHIP_LIB_DIR}")
 endforeach()
 
-execute_process(
-    COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/sdk-prefix.py"
-    RESULT_VARIABLE cwhip_settings_result
-    OUTPUT_VARIABLE cwhip_sdk_prefix
-    ERROR_VARIABLE cwhip_settings_error)
-if(NOT cwhip_settings_result STREQUAL "0")
-    message(FATAL_ERROR "${cwhip_settings_error}")
-endif()
-
-if(NOT cwhip_sdk_prefix STREQUAL "")
-    unset(Cwhip_DIR CACHE)
-    unset(Cwhip_DIR)
-    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED
-        PATHS "${cwhip_sdk_prefix}" NO_DEFAULT_PATH)
-else()
-    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED)
-endif()
 if(NOT Cwhip_APPLICATION_OUTPUT_DIRECTORIES)
     message(FATAL_ERROR
         "The selected Cwhip SDK does not support configurable application output directories.")
