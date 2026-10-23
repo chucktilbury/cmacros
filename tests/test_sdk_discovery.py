@@ -47,6 +47,7 @@ class DiscoveryTests(unittest.TestCase):
             'set(PACKAGE_VERSION_COMPATIBLE TRUE)\n', encoding="utf-8")
         (package / "CwhipConfig.cmake").write_text(
             'set(Cwhip_APPLICATION_OUTPUT_DIRECTORIES TRUE)\n'
+            f'set(Cwhip_PREFIX "{prefix}")\n'
             f'file(WRITE "${{CMAKE_BINARY_DIR}}/selected-sdk.txt" "{prefix}")\n'
             'function(cwhip_add_program name)\n'
             '  add_custom_target(${name})\n'
@@ -150,10 +151,30 @@ class DiscoveryTests(unittest.TestCase):
         self.assert_cache(self.root / "environment", "RelWithDebInfo")
 
     def test_missing_application_defaults_helper_is_actionable(self):
-        (self.other / "lib/cmake/Cwhip/ApplicationDefaults.cmake").write_text("")
-        result = self.configure()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("cwhip_apply_application_defaults()", result.stderr)
+        package = self.sdk / "lib/cmake/Cwhip"
+        config = package / "CwhipConfig.cmake"
+        config.write_text(config.read_text().replace(
+            'include("${CMAKE_CURRENT_LIST_DIR}/ApplicationDefaults.cmake")\n', ""))
+        (package / "ApplicationDefaults.cmake").unlink()
+        # A valid current SDK remains discoverable, but must not be a fallback.
+        self.write_prefix(self.new, self.sdk)
+        for explicit in (False, True):
+            with self.subTest(explicit=explicit):
+                if explicit:
+                    self.env["CWHIP_SDK"] = str(self.sdk)
+                build = f"missing-helper-{explicit}"
+                result = self.configure(build)
+                self.assertNotEqual(result.returncode, 0)
+                diagnostic = " ".join(result.stderr.split())
+                self.assertIn(str(self.sdk), diagnostic)
+                self.assertIn("application-defaults capability", diagnostic)
+                self.assertIn("cwhip_apply_application_defaults()", diagnostic)
+                self.assertIn("Rebuild and reinstall an updated Cwhip SDK", diagnostic)
+                self.assertIn("CWHIP_SDK", diagnostic)
+                self.assertNotIn("Unknown CMake command", diagnostic)
+                self.assertEqual(
+                    (self.root / build / "selected-sdk.txt").read_text(),
+                    str(self.sdk))
 
     def test_setup_modes_and_cached_shell_environment(self):
         project = self.root / "project"

@@ -20,8 +20,10 @@ else()
 endif()
 if(NOT COMMAND cwhip_apply_application_defaults)
     message(FATAL_ERROR
-        "The selected Cwhip SDK does not provide application install/build defaults. "
-        "Install an SDK that provides cwhip_apply_application_defaults().")
+        "The selected Cwhip SDK at '${Cwhip_PREFIX}' is missing the "
+        "application-defaults capability (cwhip_apply_application_defaults()). "
+        "Rebuild and reinstall an updated Cwhip SDK at this prefix, or select "
+        "an updated SDK with CWHIP_SDK, then rerun configuration.")
 endif()
 cwhip_apply_application_defaults()
 
