@@ -4,13 +4,13 @@ class Macro {
     String name
     String body
     String file
-    int line
-    int column
+    int64 line
+    int64 column
     list parameters
     bool functionLike
 
-    Macro(String macroName, String replacement, String sourceFile, int sourceLine,
-          int sourceColumn,
+    Macro(String macroName, String replacement, String sourceFile, int64 sourceLine,
+          int64 sourceColumn,
           list parameterNames, bool takesParameters) {
         name = macroName
         body = replacement
@@ -24,10 +24,10 @@ class Macro {
 
 class Arguments {
     list values
-    int end
+    int64 end
     bool valid
 
-    Arguments(list parsedValues, int next, bool succeeded) {
+    Arguments(list parsedValues, int64 next, bool succeeded) {
         values = parsedValues
         end = next
         valid = succeeded
@@ -35,10 +35,10 @@ class Arguments {
 }
 
 class Operator {
-    int index
+    int64 index
     String name
 
-    Operator(int position, String token) {
+    Operator(int64 position, String token) {
         index = position
         name = token
     }
@@ -46,10 +46,10 @@ class Operator {
 
 class LiteralValue {
     String value
-    int end
+    int64 end
     bool valid
 
-    LiteralValue(String decoded, int next, bool succeeded) {
+    LiteralValue(String decoded, int64 next, bool succeeded) {
         value = decoded
         end = next
         valid = succeeded
@@ -64,12 +64,12 @@ class Processor {
     list currentImports
     list currentTrace
     bool failed
-    int work
-    int totalWork
-    int outputLimit
+    int64 work
+    int64 totalWork
+    int64 outputLimit
     String conditionFile
-    int conditionLine
-    int conditionColumn
+    int64 conditionLine
+    int64 conditionColumn
     Sys.StandardIO io
 
     Processor(list paths) {
@@ -89,14 +89,14 @@ class Processor {
         io = Sys.System().io()
     }
 
-    int byte(String text, int index) {
+    int64 byte(String text, int64 index) {
         if (index < 0 or index >= text.length) {
             return -1
         }
-        return int(text.byteAt(index))
+        return int64(text.byteAt(index))
     }
 
-    int utf8Width(int firstByte) {
+    int64 utf8Width(int64 firstByte) {
         if (firstByte >= 240) {
             return 4
         }
@@ -109,28 +109,28 @@ class Processor {
         return 1
     }
 
-    bool nameStart(int value) {
+    bool nameStart(int64 value) {
         return ((value >= 65 and value <= 90) or
                 (value >= 97 and value <= 122) or value == 95)
     }
 
-    bool namePart(int value) {
+    bool namePart(int64 value) {
         return nameStart(value) or (value >= 48 and value <= 57)
     }
 
-    bool space(int value) {
+    bool space(int64 value) {
         return (value == 32 or value == 9 or value == 10 or
                 value == 13 or value == 12 or value == 11)
     }
 
-    int skipSpace(String text, int index) {
+    int64 skipSpace(String text, int64 index) {
         while (index < text.length and space(byte(text, index))) {
             index = index + 1
         }
         return index
     }
 
-    int skipHorizontal(String text, int index) {
+    int64 skipHorizontal(String text, int64 index) {
         while (index < text.length and
                (byte(text, index) == 32 or byte(text, index) == 9 or
                 byte(text, index) == 13)) {
@@ -139,9 +139,9 @@ class Processor {
         return index
     }
 
-    int lineAfter(String text, int fromIndex, int end, int startLine) {
-        int line = startLine
-        int cursor = fromIndex
+    int64 lineAfter(String text, int64 fromIndex, int64 end, int64 startLine) {
+        int64 line = startLine
+        int64 cursor = fromIndex
         while (cursor < end and cursor < text.length) {
             if (byte(text, cursor) == 10) {
                 line = line + 1
@@ -151,16 +151,16 @@ class Processor {
         return line
     }
 
-    int columnAfter(String text, int fromIndex, int end, int startColumn) {
-        int column = startColumn
-        int cursor = fromIndex
+    int64 columnAfter(String text, int64 fromIndex, int64 end, int64 startColumn) {
+        int64 column = startColumn
+        int64 cursor = fromIndex
         while (cursor < end and cursor < text.length) {
-            int current = byte(text, cursor)
+            int64 current = byte(text, cursor)
             if (current == 10) {
                 column = 1
                 cursor = cursor + 1
             } else {
-                int width = utf8Width(current)
+                int64 width = utf8Width(current)
                 if (current < 128 or current >= 192) {
                     column = column + 1
                 }
@@ -170,16 +170,16 @@ class Processor {
         return column
     }
 
-    String readName(String text, int first, int last) {
-        int end = first
+    String readName(String text, int64 first, int64 last) {
+        int64 end = first
         while (end < last and namePart(byte(text, end))) {
             end = end + 1
         }
         return text.slice(first, end)
     }
 
-    int nameEnd(String text, int first) {
-        int end = first
+    int64 nameEnd(String text, int64 first) {
+        int64 end = first
         while (end < text.length and namePart(byte(text, end))) {
             end = end + 1
         }
@@ -190,7 +190,7 @@ class Processor {
         if (name.length == 0 or not nameStart(byte(name, 0))) {
             return false
         }
-        int index = 1
+        int64 index = 1
         while (index < name.length) {
             if (not namePart(byte(name, index))) {
                 return false
@@ -201,7 +201,7 @@ class Processor {
     }
 
     Macro findMacro(String name) {
-        int index = 0
+        int64 index = 0
         while (index < macros.length) {
             Macro macro = macros[index] as Macro
             if (macro.name.equals(name)) {
@@ -212,8 +212,8 @@ class Processor {
         return null
     }
 
-    int findParameter(list names, String name) {
-        int index = 0
+    int64 findParameter(list names, String name) {
+        int64 index = 0
         while (index < names.length) {
             String current = names[index] as String
             if (current.equals(name)) {
@@ -224,7 +224,7 @@ class Processor {
         return -1
     }
 
-    void report(int code, String file, int line, int column, String message) {
+    void report(int64 code, String file, int64 line, int64 column, String message) {
         if (failed) {
             return
         }
@@ -232,13 +232,13 @@ class Processor {
         io.writeErrorLine(format(
             "cmacros: error[CMACRO{:04}]: {}:{}:{}: {}",
             code, file, line, column, message))
-        int importIndex = 0
+        int64 importIndex = 0
         while (importIndex < currentImports.length) {
             String imported = currentImports[importIndex] as String
             io.writeErrorLine(format("cmacros: note: imported from '{}'", imported))
             importIndex = importIndex + 1
         }
-        int traceIndex = 0
+        int64 traceIndex = 0
         while (traceIndex < currentTrace.length) {
             String frame = currentTrace[traceIndex] as String
             io.writeErrorLine(format("cmacros: note: {}", frame))
@@ -250,8 +250,8 @@ class Processor {
         report(1009, conditionFile, conditionLine, conditionColumn, message)
     }
 
-    String readFile(String path, int line) {
-        int cacheIndex = 0
+    String readFile(String path, int64 line) {
+        int64 cacheIndex = 0
         while (cacheIndex < cachedPaths.length) {
             String cachedPath = cachedPaths[cacheIndex] as String
             if (cachedPath.equals(path)) {
@@ -259,7 +259,7 @@ class Processor {
             }
             cacheIndex = cacheIndex + 1
         }
-        int size = Sys.FileSystem().fileSize(path)
+        int64 size = Sys.FileSystem().fileSize(path)
         if (size > 16777216) {
             report(2001, path, line, 1, "input exceeds the 16 MiB source limit")
             return ""
@@ -279,7 +279,7 @@ class Processor {
         return content
     }
 
-    int definitionCount() {
+    int64 definitionCount() {
         return macros.length
     }
 
@@ -292,7 +292,7 @@ class Processor {
         if (fs.isFile(format("{}.txt", local))) {
             return fs.absolutePath(format("{}.txt", local))
         }
-        int index = 0
+        int64 index = 0
         while (index < includePaths.length) {
             String directory = includePaths[index] as String
             String candidate = fs.join(directory, requested)
@@ -308,7 +308,7 @@ class Processor {
     }
 
     bool inList(list values, String name) {
-        int index = 0
+        int64 index = 0
         while (index < values.length) {
             String value = values[index] as String
             if (value.equals(name)) {
@@ -319,7 +319,7 @@ class Processor {
         return false
     }
 
-    String processFile(String file, list imports, list active, int depth) {
+    String processFile(String file, list imports, list active, int64 depth) {
         list parentImports = currentImports
         currentImports = imports
         if (failed) {
@@ -343,7 +343,7 @@ class Processor {
             return ""
         }
         list nestedImports = []
-        int importIndex = 0
+        int64 importIndex = 0
         while (importIndex < imports.length) {
             nestedImports.append(imports[importIndex])
             importIndex = importIndex + 1
@@ -357,18 +357,18 @@ class Processor {
         return output
     }
 
-    Arguments parseArguments(String text, int open) {
+    Arguments parseArguments(String text, int64 open) {
         list result = []
-        int index = open + 1
-        int valueStart = index
-        int parens = 0
-        int brackets = 0
-        int braces = 0
-        int quote = 0
+        int64 index = open + 1
+        int64 valueStart = index
+        int64 parens = 0
+        int64 brackets = 0
+        int64 braces = 0
+        int64 quote = 0
         bool escaped = false
         bool finished = false
         while (index < text.length and not finished) {
-            int current = byte(text, index)
+            int64 current = byte(text, index)
             if (quote != 0) {
                 if (escaped) {
                     escaped = false
@@ -464,7 +464,7 @@ class Processor {
         return value
     }
 
-    int hexValue(int value) {
+    int64 hexValue(int64 value) {
         if (value >= 48 and value <= 57) {
             return value - 48
         }
@@ -477,15 +477,15 @@ class Processor {
         return -1
     }
 
-    LiteralValue parseLiteral(String text, int open) {
-        int quote = byte(text, open)
+    LiteralValue parseLiteral(String text, int64 open) {
+        int64 quote = byte(text, open)
         if (quote != 34 and quote != 39) {
             return LiteralValue("", open, false)
         }
         String result = ""
-        int index = open + 1
+        int64 index = open + 1
         while (index < text.length) {
-            int current = byte(text, index)
+            int64 current = byte(text, index)
             if (current == quote) {
                 return LiteralValue(result, index + 1, true)
             }
@@ -494,7 +494,7 @@ class Processor {
                 if (index >= text.length) {
                     return LiteralValue("", open, false)
                 }
-                int escaped = byte(text, index)
+                int64 escaped = byte(text, index)
                 if (escaped == 110) {
                     result.append(format("{:c}", 10))
                 } else {
@@ -523,8 +523,8 @@ class Processor {
                                                     if (index + 2 >= text.length) {
                                                         return LiteralValue("", open, false)
                                                     }
-                                                    int high = hexValue(byte(text, index + 1))
-                                                    int low = hexValue(byte(text, index + 2))
+                                                    int64 high = hexValue(byte(text, index + 1))
+                                                    int64 low = hexValue(byte(text, index + 2))
                                                     if (high < 0 or low < 0) {
                                                         return LiteralValue("", open, false)
                                                     }
@@ -543,7 +543,7 @@ class Processor {
                 }
                 index = index + 1
             } else {
-                int width = utf8Width(current)
+                int64 width = utf8Width(current)
                 result.append(text.slice(index, index + width))
                 index = index + width
             }
@@ -551,15 +551,15 @@ class Processor {
         return LiteralValue("", open, false)
     }
 
-    bool wordBoundary(String text, int index) {
+    bool wordBoundary(String text, int64 index) {
         if (index < 0 or index >= text.length) {
             return true
         }
-        int value = byte(text, index)
+        int64 value = byte(text, index)
         return space(value) or value == 40 or value == 41
     }
 
-    int operatorPriority(String operator) {
+    int64 operatorPriority(String operator) {
         String upper = operator.toUpper()
         if (upper.equals("OR") or operator.equals("||")) {
             return 1
@@ -580,7 +580,7 @@ class Processor {
         return 0
     }
 
-    String operatorAt(String text, int index) {
+    String operatorAt(String text, int64 index) {
         if (index + 1 < text.length) {
             String pair = text.slice(index, index + 2)
             if (pair.equals("||") or pair.equals("&&") or pair.equals("==") or
@@ -588,7 +588,7 @@ class Processor {
                 return pair
             }
         }
-        int remaining = text.length - index
+        int64 remaining = text.length - index
         if (remaining >= 3) {
             String word = text.slice(index, index + 3).toUpper()
             if ((word.equals("AND") or word.equals("NEQ") or
@@ -612,14 +612,14 @@ class Processor {
         return ""
     }
 
-    Operator findOperator(String expression, int wantedPriority) {
-        int parens = 0
-        int index = 0
-        int quote = 0
+    Operator findOperator(String expression, int64 wantedPriority) {
+        int64 parens = 0
+        int64 index = 0
+        int64 quote = 0
         bool escaped = false
         Operator found = Operator(-1, "")
         while (index < expression.length) {
-            int current = byte(expression, index)
+            int64 current = byte(expression, index)
             if (quote != 0) {
                 if (escaped) {
                     escaped = false
@@ -662,12 +662,12 @@ class Processor {
             byte(expression, expression.length - 1) != 41) {
             return false
         }
-        int depth = 0
-        int index = 0
-        int quote = 0
+        int64 depth = 0
+        int64 index = 0
+        int64 quote = 0
         bool escaped = false
         while (index < expression.length) {
-            int current = byte(expression, index)
+            int64 current = byte(expression, index)
             if (quote != 0) {
                 if (escaped) {
                     escaped = false
@@ -705,7 +705,7 @@ class Processor {
         if (value.length == 0) {
             return false
         }
-        int index = 0
+        int64 index = 0
         if (byte(value, 0) == 45 or byte(value, 0) == 43) {
             index = 1
         }
@@ -722,7 +722,7 @@ class Processor {
     }
 
     bool decimalZero(String value) {
-        int index = 0
+        int64 index = 0
         if (byte(value, 0) == 45 or byte(value, 0) == 43) {
             index = 1
         }
@@ -735,11 +735,11 @@ class Processor {
         return true
     }
 
-    int compareDecimals(String left, String right) {
+    int64 compareDecimals(String left, String right) {
         bool leftNegative = byte(left, 0) == 45
         bool rightNegative = byte(right, 0) == 45
-        int leftStart = 0
-        int rightStart = 0
+        int64 leftStart = 0
+        int64 rightStart = 0
         if (leftNegative or byte(left, 0) == 43) {
             leftStart = 1
         }
@@ -752,19 +752,19 @@ class Processor {
         while (rightStart < right.length - 1 and byte(right, rightStart) == 48) {
             rightStart = rightStart + 1
         }
-        int leftLength = left.length - leftStart
-        int rightLength = right.length - rightStart
-        int magnitude = 0
+        int64 leftLength = left.length - leftStart
+        int64 rightLength = right.length - rightStart
+        int64 magnitude = 0
         if (leftLength < rightLength) {
             magnitude = -1
         } else {
             if (leftLength > rightLength) {
                 magnitude = 1
             } else {
-                int index = 0
+                int64 index = 0
                 while (index < leftLength and magnitude == 0) {
-                    int leftDigit = byte(left, leftStart + index)
-                    int rightDigit = byte(right, rightStart + index)
+                    int64 leftDigit = byte(left, leftStart + index)
+                    int64 rightDigit = byte(right, rightStart + index)
                     if (leftDigit < rightDigit) {
                         magnitude = -1
                     } else {
@@ -799,7 +799,7 @@ class Processor {
         return true
     }
 
-    bool evalCondition(String expression, int recursion) {
+    bool evalCondition(String expression, int64 recursion) {
         if (recursion > 128) {
             conditionError("conditional expression nesting limit (128) exceeded")
             return false
@@ -809,12 +809,12 @@ class Processor {
             conditionError("empty conditional expression or operand")
             return false
         }
-        int nesting = 0
-        int scan = 0
-        int quote = 0
+        int64 nesting = 0
+        int64 scan = 0
+        int64 quote = 0
         bool escaped = false
         while (scan < value.length) {
-            int current = byte(value, scan)
+            int64 current = byte(value, scan)
             if (quote != 0) {
                 if (escaped) {
                     escaped = false
@@ -914,19 +914,19 @@ class Processor {
         return valueTruth(resolveConditionValue(value, recursion + 1))
     }
 
-    String resolveConditionValue(String expression, int recursion) {
+    String resolveConditionValue(String expression, int64 recursion) {
         String value = expression.trim()
         if (value.startsWith("@")) {
-            int end = nameEnd(value, 1)
+            int64 end = nameEnd(value, 1)
             if (end == 1) {
                 conditionError("expected a macro name after @")
                 return ""
             }
             String name = value.slice(1, end)
             Macro macro = findMacro(name)
-            int cursor = skipHorizontal(value, end)
+            int64 cursor = skipHorizontal(value, end)
             list arguments = []
-            int afterReference = end
+            int64 afterReference = end
             if (cursor < value.length) {
                 if (byte(value, cursor) != 40 or macro == null or
                     not macro.functionLike) {
@@ -958,7 +958,7 @@ class Processor {
             list active = [name]
             list parentTrace = currentTrace
             list nestedTrace = []
-            int traceIndex = 0
+            int64 traceIndex = 0
             while (traceIndex < currentTrace.length) {
                 nestedTrace.append(currentTrace[traceIndex])
                 traceIndex = traceIndex + 1
@@ -998,7 +998,7 @@ class Processor {
         bool less = false
         bool greater = false
         if (decimalNumber(left) and decimalNumber(right)) {
-            int comparison = compareDecimals(left, right)
+            int64 comparison = compareDecimals(left, right)
             equal = comparison == 0
             less = comparison < 0
             greater = comparison > 0
@@ -1028,14 +1028,14 @@ class Processor {
         return greater or equal
     }
 
-    int closeBrace(String text, int open) {
-        int depth = 1
-        int index = open + 1
-        int quote = 0
+    int64 closeBrace(String text, int64 open) {
+        int64 depth = 1
+        int64 index = open + 1
+        int64 quote = 0
         bool escaped = false
         while (index < text.length) {
-            int current = byte(text, index)
-            int next = byte(text, index + 1)
+            int64 current = byte(text, index)
+            int64 next = byte(text, index + 1)
             if (quote != 0) {
                 if (escaped) {
                     escaped = false
@@ -1087,13 +1087,13 @@ class Processor {
         return -1
     }
 
-    int closeParen(String text, int open) {
-        int depth = 1
-        int index = open + 1
-        int quote = 0
+    int64 closeParen(String text, int64 open) {
+        int64 depth = 1
+        int64 index = open + 1
+        int64 quote = 0
         bool escaped = false
         while (index < text.length) {
-            int current = byte(text, index)
+            int64 current = byte(text, index)
             if (quote != 0) {
                 if (escaped) {
                     escaped = false
@@ -1127,14 +1127,14 @@ class Processor {
         return -1
     }
 
-    void addDefinition(String name, String body, String file, int line, int column,
+    void addDefinition(String name, String body, String file, int64 line, int64 column,
                        list parameters, bool functionLike) {
         if (not validName(name)) {
             report(1000, file, line, 1,
                    format("invalid macro name '{}'", name))
             return
         }
-        int parameterIndex = 0
+        int64 parameterIndex = 0
         while (parameterIndex < parameters.length) {
             String parameter = parameters[parameterIndex] as String
             if (not validName(parameter)) {
@@ -1143,7 +1143,7 @@ class Processor {
                               parameter, name))
                 return
             }
-            int previousIndex = 0
+            int64 previousIndex = 0
             while (previousIndex < parameterIndex) {
                 String previousParameter = parameters[previousIndex] as String
                 if (previousParameter.equals(parameter)) {
@@ -1159,7 +1159,7 @@ class Processor {
         Macro existing = findMacro(name)
         if (existing != null) {
             bool sameParameters = existing.parameters.length == parameters.length
-            int index = 0
+            int64 index = 0
             while (index < existing.parameters.length and sameParameters) {
                 String oldParameter = existing.parameters[index] as String
                 String newParameter = parameters[index] as String
@@ -1179,22 +1179,22 @@ class Processor {
                             parameters, functionLike))
     }
 
-    String processText(String file, String source, int firstLine, int firstColumn,
+    String processText(String file, String source, int64 firstLine, int64 firstColumn,
                        list parameterNames, list parameterValues, list active,
-                       list imports, int depth) {
+                       list imports, int64 depth) {
         String output = ""
         if (depth > 128) {
             report(1002, file, firstLine, firstColumn,
                    "macro expansion nesting limit (128) exceeded")
             return output
         }
-        int index = 0
-        int line = firstLine
-        int column = firstColumn
-        int literalQuote = 0
+        int64 index = 0
+        int64 line = firstLine
+        int64 column = firstColumn
+        int64 literalQuote = 0
         bool literalEscaped = false
         while (index < source.length and not failed) {
-            int startIndex = index
+            int64 startIndex = index
             work = work + 1
             totalWork = totalWork + 1
             if (work > 2000000 or totalWork > 20000000) {
@@ -1202,8 +1202,8 @@ class Processor {
                        "processing work limit (2,000,000 per pass; 20,000,000 total) exceeded")
                 break
             }
-            int current = byte(source, index)
-            int next = byte(source, index + 1)
+            int64 current = byte(source, index)
+            int64 next = byte(source, index + 1)
             bool handled = false
             if (current == 92 and next == 64) {
                 output.append("@")
@@ -1213,7 +1213,7 @@ class Processor {
             }
             if (not handled and literalQuote == 0 and
                 current == 47 and next == 47) {
-                int end = index
+                int64 end = index
                 while (end < source.length and byte(source, end) != 10) {
                     end = end + 1
                 }
@@ -1222,7 +1222,7 @@ class Processor {
             }
             if (not handled and literalQuote == 0 and
                 current == 47 and next == 42) {
-                int end = index + 2
+                int64 end = index + 2
                 while (end + 1 < source.length and
                        not (byte(source, end) == 42 and byte(source, end + 1) == 47)) {
                     end = end + 1
@@ -1234,7 +1234,7 @@ class Processor {
                 }
                 output.append(" ")
                 String comment = source.slice(index + 2, end)
-                int ci = 0
+                int64 ci = 0
                 while (ci < comment.length) {
                     if (byte(comment, ci) == 10) {
                         output.append("\n")
@@ -1246,28 +1246,28 @@ class Processor {
             }
             if (not handled and literalQuote == 0 and
                 current == 46 and nameStart(next)) {
-                int wordEnd = nameEnd(source, index + 1)
+                int64 wordEnd = nameEnd(source, index + 1)
                 String directive = source.slice(index + 1, wordEnd).toLower()
-                int argumentStart = skipSpace(source, wordEnd)
+                int64 argumentStart = skipSpace(source, wordEnd)
                 if (directive.equals("if")) {
                     if (byte(source, argumentStart) != 40) {
                         report(1007, file, line, column,
                                ".if requires a parenthesized expression")
                         break
                     }
-                    int expressionEnd = closeParen(source, argumentStart)
+                    int64 expressionEnd = closeParen(source, argumentStart)
                     if (expressionEnd < 0) {
                         report(1007, file, line, column,
                                "unterminated .if expression")
                         break
                     }
-                    int bodyStart = skipSpace(source, expressionEnd + 1)
+                    int64 bodyStart = skipSpace(source, expressionEnd + 1)
                     if (byte(source, bodyStart) != 123) {
                         report(1007, file, line, column,
                                ".if requires a braced body")
                         break
                     }
-                    int bodyEnd = closeBrace(source, bodyStart)
+                    int64 bodyEnd = closeBrace(source, bodyStart)
                     if (bodyEnd < 0) {
                         report(1007, file, line, column,
                                "unterminated .if body")
@@ -1279,9 +1279,9 @@ class Processor {
                     bool selected = evalCondition(
                         source.slice(argumentStart + 1, expressionEnd), 0)
                     String selectedBody = ""
-                    int selectedLine = lineAfter(source, startIndex,
+                    int64 selectedLine = lineAfter(source, startIndex,
                                                  bodyStart + 1, line)
-                    int selectedColumn = columnAfter(source, startIndex,
+                    int64 selectedColumn = columnAfter(source, startIndex,
                                                      bodyStart + 1, column)
                     if (selected) {
                         selectedBody = source.slice(bodyStart + 1, bodyEnd)
@@ -1289,20 +1289,20 @@ class Processor {
                     index = bodyEnd + 1
                     bool lookingAtElse = true
                     while (lookingAtElse and not failed) {
-                        int elseStart = skipSpace(source, index)
+                        int64 elseStart = skipSpace(source, index)
                         if (byte(source, elseStart) != 46) {
                             lookingAtElse = false
                         } else {
-                            int elseNameEnd = nameEnd(source, elseStart + 1)
+                            int64 elseNameEnd = nameEnd(source, elseStart + 1)
                             String elseName = source.slice(elseStart + 1, elseNameEnd).toLower()
                             if (not elseName.equals("else")) {
                                 lookingAtElse = false
                             } else {
-                                int elseArgs = skipSpace(source, elseNameEnd)
+                                int64 elseArgs = skipSpace(source, elseNameEnd)
                                 bool elseHasExpression = byte(source, elseArgs) == 40
                                 bool elseMatches = true
                                 if (elseHasExpression) {
-                                    int elseExpressionEnd = closeParen(source, elseArgs)
+                                    int64 elseExpressionEnd = closeParen(source, elseArgs)
                                     if (elseExpressionEnd < 0) {
                                         report(1007, file,
                                             lineAfter(source, startIndex, elseStart, line),
@@ -1326,7 +1326,7 @@ class Processor {
                                         ".else requires a braced body")
                                     break
                                 }
-                                int elseBodyEnd = closeBrace(source, elseArgs)
+                                int64 elseBodyEnd = closeBrace(source, elseArgs)
                                 if (elseBodyEnd < 0) {
                                     report(1007, file,
                                         lineAfter(source, startIndex, elseStart, line),
@@ -1357,22 +1357,22 @@ class Processor {
                            "misplaced .else directive")
                 } else {
                 if (directive.equals("define")) {
-                    int nameStartIndex = argumentStart
-                    int nameStop = nameEnd(source, nameStartIndex)
+                    int64 nameStartIndex = argumentStart
+                    int64 nameStop = nameEnd(source, nameStartIndex)
                     if (nameStop == nameStartIndex) {
                         report(1000, file, line, column,
                                "expected a macro name after .define")
                         break
                     }
                     String macroName = source.slice(nameStartIndex, nameStop)
-                    int cursor = skipHorizontal(source, nameStop)
+                    int64 cursor = skipHorizontal(source, nameStop)
                     list parameters = []
                     bool functionLike = false
                     if (byte(source, cursor) == 40) {
                         functionLike = true
-                        int close = cursor + 1
-                        int parenDepth = 1
-                        int paramStart = close
+                        int64 close = cursor + 1
+                        int64 parenDepth = 1
+                        int64 paramStart = close
                         while (close < source.length and parenDepth > 0) {
                             if (byte(source, close) == 40) {
                                 parenDepth = parenDepth + 1
@@ -1403,9 +1403,9 @@ class Processor {
                         cursor = skipHorizontal(source, nameStop)
                     }
                     String body = ""
-                    int bodyLine = lineAfter(source, startIndex, cursor, line)
+                    int64 bodyLine = lineAfter(source, startIndex, cursor, line)
                     if (byte(source, cursor) == 123) {
-                        int closeBody = closeBrace(source, cursor)
+                        int64 closeBody = closeBrace(source, cursor)
                         if (closeBody < 0) {
                             report(1000, file, bodyLine,
                                    columnAfter(source, startIndex, cursor, column),
@@ -1480,9 +1480,9 @@ class Processor {
                 handled = true
             }
             if (not handled and current == 64 and nameStart(next)) {
-                int endName = nameEnd(source, index + 1)
+                int64 endName = nameEnd(source, index + 1)
                 String name = source.slice(index + 1, endName)
-                int localIndex = findParameter(parameterNames, name)
+                int64 localIndex = findParameter(parameterNames, name)
                 if (localIndex >= 0) {
                     String value = parameterValues[localIndex] as String
                     output.append(processText(file, value,
@@ -1492,9 +1492,9 @@ class Processor {
                     index = endName
                 } else {
                     Macro macro = findMacro(name)
-                    int cursor = skipHorizontal(source, endName)
+                    int64 cursor = skipHorizontal(source, endName)
                     list arguments = []
-                    int afterReference = endName
+                    int64 afterReference = endName
                     bool callSyntax = false
                     if (macro != null) {
                         callSyntax = macro.functionLike and macro.parameters.length > 0
@@ -1540,7 +1540,7 @@ class Processor {
                             break
                         } else {
                             list nestedActive = []
-                            int activeIndex = 0
+                            int64 activeIndex = 0
                             while (activeIndex < active.length) {
                                 nestedActive.append(active[activeIndex])
                                 activeIndex = activeIndex + 1
@@ -1548,7 +1548,7 @@ class Processor {
                             nestedActive.append(name)
                             list parentTrace = currentTrace
                             list nestedTrace = []
-                            int traceIndex = 0
+                            int64 traceIndex = 0
                             while (traceIndex < currentTrace.length) {
                                 nestedTrace.append(currentTrace[traceIndex])
                                 traceIndex = traceIndex + 1
@@ -1570,7 +1570,7 @@ class Processor {
                 handled = true
             }
             if (not handled) {
-                int width = utf8Width(current)
+                int64 width = utf8Width(current)
                 output.append(source.slice(index, index + width))
                 if (literalQuote != 0) {
                     if (literalEscaped) {
@@ -1596,13 +1596,13 @@ class Processor {
                        "expanded output exceeds the 7,000,000-byte limit")
                 break
             }
-            int lineCursor = startIndex
+            int64 lineCursor = startIndex
             while (lineCursor < index) {
                 if (byte(source, lineCursor) == 10) {
                     line = line + 1
                     column = 1
                 } else {
-                    int currentByte = byte(source, lineCursor)
+                    int64 currentByte = byte(source, lineCursor)
                     if (currentByte < 128 or currentByte >= 192) {
                         column = column + 1
                     }
@@ -1620,10 +1620,10 @@ class Processor {
     String process(String input) {
         String previous = ""
         String result = ""
-        int pass = 0
+        int64 pass = 0
         while (pass < 256 and not failed) {
             work = 0
-            int definitionsBeforePass = definitionCount()
+            int64 definitionsBeforePass = definitionCount()
             list imports = []
             list active = []
             result = processFile(input, imports, active, 0)
@@ -1657,7 +1657,7 @@ class Processor {
         }
         try {
             Sys.File output = Sys.File(temporary, "wb")
-            int written = output.write(text)
+            int64 written = output.write(text)
             output.close()
             if (written != text.length) {
                 report(2009, path, 1, 1, "failed to write complete output")
@@ -1696,12 +1696,12 @@ class Processor {
 start {
     Sys.Process process = Sys.Process()
     Sys.StandardIO io = Sys.System().io()
-    int argc = process.argc()
+    int64 argc = process.argc()
     String input = ""
     String outputPath = ""
     list paths = []
     list definitions = []
-    int index = 1
+    int64 index = 1
     bool showHelp = false
     bool showVersion = false
     String problem = ""
@@ -1753,7 +1753,7 @@ start {
                 problem = "option -I requires a directory"
             } else {
                 list segments = process.arg(index + 1).split(":")
-                int segment = 0
+                int64 segment = 0
                 while (segment < segments.length) {
                     paths.append(segments[segment] as String)
                     segment = segment + 1
@@ -1764,7 +1764,7 @@ start {
         }
         if (not consumed and argument.startsWith("--include=")) {
             list segments = argument.slice(10, argument.length).split(":")
-            int segment = 0
+            int64 segment = 0
             while (segment < segments.length) {
                 paths.append(segments[segment] as String)
                 segment = segment + 1
@@ -1774,7 +1774,7 @@ start {
         }
         if (not consumed and argument.startsWith("-I=")) {
             list segments = argument.slice(3, argument.length).split(":")
-            int segment = 0
+            int64 segment = 0
             while (segment < segments.length) {
                 paths.append(segments[segment] as String)
                 segment = segment + 1
@@ -1784,7 +1784,7 @@ start {
         }
         if (not consumed and argument.startsWith("-I") and argument.length > 2) {
             list segments = argument.slice(2, argument.length).split(":")
-            int segment = 0
+            int64 segment = 0
             while (segment < segments.length) {
                 paths.append(segments[segment] as String)
                 segment = segment + 1
@@ -1831,9 +1831,9 @@ start {
             if (validVerbosity) {
                 String verbosityText = process.arg(index + 1)
                 validVerbosity = verbosityText.length > 0
-                int digit = 0
+                int64 digit = 0
                 while (digit < verbosityText.length) {
-                    int codepoint = int(verbosityText.byteAt(digit))
+                    int64 codepoint = int64(verbosityText.byteAt(digit))
                     if (codepoint < 48 or codepoint > 57) {
                         validVerbosity = false
                     }
@@ -1850,9 +1850,9 @@ start {
         if (not consumed and argument.startsWith("--verbosity=")) {
             String verbosityText = argument.slice(12, argument.length)
             bool validVerbosity = verbosityText.length > 0
-            int digit = 0
+            int64 digit = 0
             while (digit < verbosityText.length) {
-                int codepoint = int(verbosityText.byteAt(digit))
+                int64 codepoint = int64(verbosityText.byteAt(digit))
                 if (codepoint < 48 or codepoint > 57) {
                     validVerbosity = false
                 }
@@ -1895,7 +1895,7 @@ start {
     String macroPath = process.getEnv("MACRO_PATH")
     if (macroPath.length > 0) {
         list environmentPaths = macroPath.split(":")
-        int item = 0
+        int64 item = 0
         while (item < environmentPaths.length) {
             paths.append(environmentPaths[item] as String)
             item = item + 1
@@ -1915,10 +1915,10 @@ start {
         process.exit(1)
     }
     Processor processor = Processor(paths)
-    int definitionIndex = 0
+    int64 definitionIndex = 0
     while (definitionIndex < definitions.length) {
         String definition = definitions[definitionIndex] as String
-        int equals = definition.find("=")
+        int64 equals = definition.find("=")
         String name = definition
         String body = ""
         if (equals >= 0) {

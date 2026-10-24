@@ -8,8 +8,9 @@ processor does not invoke a shell, compiler, or other subprocess.
 ## Build
 
 The project requires CMake 3.24 or newer, Python 3.11 or newer, and the
-Cwhip 0.0.1 SDK. Point `CWHIP_SDK` at an SDK installation if it is not in the
-normal CMake package search path. Otherwise CMake reads `sdk_prefix` from
+Cwhip 0.0.2 SDK with ABI `numeric-v2`. Point `CWHIP_SDK` at an SDK installation
+if it is not in the normal CMake package search path. Otherwise CMake reads
+`sdk_prefix` from
 `$XDG_CONFIG_HOME/cwhip/sdk.toml` (or `$HOME/.config/cwhip/sdk.toml` when
 `XDG_CONFIG_HOME` is unset or empty). Only when `sdk.toml` is absent does it
 consult the legacy `settings.toml` in that same directory.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Migrate implementation integers to `int64` and require Cwhip SDK 0.0.2,
+  ABI `numeric-v2`, without changing the macro input language.
 - Identify the selected SDK prefix and give rebuild/reinstall instructions
   when an older SDK lacks the application-defaults helper.
 - Inherit matching Cwhip SDK application install-prefix and build-type defaults
