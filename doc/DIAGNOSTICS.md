@@ -1,15 +1,17 @@
 # Diagnostics and limits
 
-Errors use the stable form
+Source-processing errors use the stable form
 
 ```text
 cmacros: error[CMACROxxxx]: path:line:column: explanation
 ```
 
 Locations refer to the original file and one-based line/column. When useful,
-import and macro expansion notes follow the error. Startup/usage errors use
-exit status 2; source, resource, and output failures use status 1; success,
-help, and version use status 0. No ANSI color is required.
+import and macro expansion notes follow the error. Startup/usage errors and
+the initial cannot-open-input error do not include a source location.
+Startup/usage errors use exit status 2; source, resource, and output failures
+use status 1; success, help, and version use status 0. No ANSI color is
+required.
 
 The code ranges follow the
 [canonical Cwhip diagnostic contract](https://github.com/chucktilbury/cwhip/blob/master/doc/DIAGNOSTICS.md):
