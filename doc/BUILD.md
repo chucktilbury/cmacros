@@ -7,6 +7,13 @@
 - Cwhip SDK 0.0.1, including application output-directory support and
   `cwhip_apply_application_defaults()`
 
+Older SDK installations may still report version 0.0.1 but lack the
+application-defaults helper. Updating the Cwhip source alone does not update an
+installed SDK: rebuild and reinstall an updated Cwhip SDK at the prefix named
+in the configuration error, or point `CWHIP_SDK` at an updated installation,
+then rerun configuration. cmacros rejects the selected older SDK rather than
+silently falling back or skipping application defaults.
+
 The build uses Cwhip's `cwhip_add_program` and its static runtime. Macro
 processing is implemented in `src/main.cw`; Python is used only as the test
 driver and for safe TOML configuration parsing.

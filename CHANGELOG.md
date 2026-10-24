@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Identify the selected SDK prefix and give rebuild/reinstall instructions
+  when an older SDK lacks the application-defaults helper.
 - Inherit matching Cwhip SDK application install-prefix and build-type defaults
   before project initialization, preserving explicit settings and existing caches.
 - Make setup's optional build mode an explicit override rather than defaulting
