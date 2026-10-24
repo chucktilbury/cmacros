@@ -4,15 +4,23 @@
 
 - CMake 3.24+
 - Python 3.11+ (used for SDK configuration discovery and black-box tests)
-- Cwhip SDK 0.0.1, including application output-directory support and
-  `cwhip_apply_application_defaults()`
+- Cwhip SDK 0.0.2 with `Cwhip_SDK_ABI=numeric-v2`, including application
+  output-directory support and `cwhip_apply_application_defaults()`
 
-Older SDK installations may still report version 0.0.1 but lack the
-application-defaults helper. Updating the Cwhip source alone does not update an
-installed SDK: rebuild and reinstall an updated Cwhip SDK at the prefix named
+Older SDK installations are not compatible with the fixed-width numeric model.
+Updating the Cwhip source alone does not update an installed SDK: rebuild and
+reinstall an updated Cwhip SDK at the prefix named
 in the configuration error, or point `CWHIP_SDK` at an updated installation,
 then rerun configuration. cmacros rejects the selected older SDK rather than
-silently falling back or skipping application defaults.
+silently falling back or skipping application defaults. The migration depends
+on [chucktilbury/cwhip#25](https://github.com/chucktilbury/cwhip/pull/25) and the numeric SDK
+migration; rebuild the SDK and its native packages together. Any rebuilt package
+manifest must declare `sdk-abi = "numeric-v2"` under `[package]`. cmacros itself
+is an application and does not publish an SDK package manifest.
+
+Implementation offsets, counters, and byte conversions use `int64`. The macro
+input language is unchanged: decimal condition operands are still compared as
+arbitrary-length signed integers, not converted to a fixed-width Cwhip number.
 
 The build uses Cwhip's `cwhip_add_program` and its static runtime. Macro
 processing is implemented in `src/main.cw`; Python is used only as the test
@@ -48,8 +56,9 @@ cannot change SDK discovery once `sdk.toml` exists. If neither file specifies
 a prefix, CMake uses normal package discovery. An explicitly selected SDK is
 required to work: it cannot silently fall back to another SDK or a cached
 `Cwhip_DIR` from an earlier configuration. The project
-requires the exact SDK version 0.0.1 and fails configuration if the
-application output-directory capability or application-defaults helper is missing.
+requires the exact SDK version 0.0.2 and ABI `numeric-v2`, and fails configuration
+if the application output-directory capability or application-defaults helper
+is missing.
 
 ## Application defaults
 
@@ -89,6 +98,8 @@ prefix through `tests/test_install.py`. It also verifies the 16 preserved
 upstream examples using `examples/run_examples.py`; see
 [the examples guide](../examples/README.md). The suite does not fetch
 dependencies or access the network.
+Numeric migration regressions cover indices and source positions beyond int8,
+hex escape arithmetic, and decimal comparisons outside the int64/uint64 ranges.
 
 Run the isolated SDK discovery regressions without an installed SDK using
 `python3 tests/test_sdk_discovery.py`. These cover the helper, CMake selection

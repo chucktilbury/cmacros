@@ -42,11 +42,14 @@ class DiscoveryTests(unittest.TestCase):
         package = prefix / "lib" / "cmake" / "Cwhip"
         package.mkdir(parents=True)
         (package / "CwhipConfigVersion.cmake").write_text(
-            'set(PACKAGE_VERSION "0.0.1")\n'
-            'set(PACKAGE_VERSION_EXACT TRUE)\n'
-            'set(PACKAGE_VERSION_COMPATIBLE TRUE)\n', encoding="utf-8")
+            'set(PACKAGE_VERSION "0.0.2")\n'
+            'if(PACKAGE_FIND_VERSION VERSION_EQUAL PACKAGE_VERSION)\n'
+            '  set(PACKAGE_VERSION_EXACT TRUE)\n'
+            '  set(PACKAGE_VERSION_COMPATIBLE TRUE)\n'
+            'endif()\n', encoding="utf-8")
         (package / "CwhipConfig.cmake").write_text(
             'set(Cwhip_APPLICATION_OUTPUT_DIRECTORIES TRUE)\n'
+            'set(Cwhip_SDK_ABI "numeric-v2")\n'
             f'set(Cwhip_PREFIX "{prefix}")\n'
             f'file(WRITE "${{CMAKE_BINARY_DIR}}/selected-sdk.txt" "{prefix}")\n'
             'function(cwhip_add_program name)\n'
@@ -117,6 +120,34 @@ class DiscoveryTests(unittest.TestCase):
     def test_defaults_are_applied_before_project(self):
         self.assert_configured(self.other)
         self.assert_cache(self.root / "applications", "RelWithDebInfo")
+
+    def test_numeric_abi_is_required_without_fallback(self):
+        config = self.sdk / "lib/cmake/Cwhip/CwhipConfig.cmake"
+        original = config.read_text()
+        self.write_prefix(self.new, self.sdk)
+        for abi in (None, "legacy", ""):
+            declaration = "" if abi is None else f'set(Cwhip_SDK_ABI "{abi}")\n'
+            config.write_text(original.replace(
+                'set(Cwhip_SDK_ABI "numeric-v2")\n', declaration))
+            for explicit in (False, True):
+                with self.subTest(abi=abi, explicit=explicit):
+                    self.env["CWHIP_SDK"] = str(self.sdk) if explicit else ""
+                    result = self.configure(f"abi-{abi}-{explicit}")
+                    self.assertNotEqual(result.returncode, 0)
+                    diagnostic = " ".join(result.stderr.split())
+                    self.assertIn(str(self.sdk), diagnostic)
+                    self.assertIn("Cwhip_SDK_ABI=numeric-v2", diagnostic)
+                    self.assertIn("Rebuild and reinstall", diagnostic)
+                    self.assertIn("CWHIP_SDK", diagnostic)
+
+    def test_old_sdk_version_is_rejected_without_fallback(self):
+        version = self.sdk / "lib/cmake/Cwhip/CwhipConfigVersion.cmake"
+        version.write_text(version.read_text().replace("0.0.2", "0.0.1"))
+        self.write_prefix(self.new, self.sdk)
+        result = self.configure()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("0.0.2", result.stderr)
+        self.assertIn("0.0.1", result.stderr)
 
     def test_explicit_and_cached_values_override_defaults(self):
         for index, (prefix, build_type) in enumerate((

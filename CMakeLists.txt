@@ -13,10 +13,16 @@ endif()
 if(NOT cwhip_sdk_prefix STREQUAL "")
     unset(Cwhip_DIR CACHE)
     unset(Cwhip_DIR)
-    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED
+    find_package(Cwhip 0.0.2 EXACT CONFIG REQUIRED
         PATHS "${cwhip_sdk_prefix}" NO_DEFAULT_PATH)
 else()
-    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED)
+    find_package(Cwhip 0.0.2 EXACT CONFIG REQUIRED)
+endif()
+if(NOT Cwhip_SDK_ABI STREQUAL "numeric-v2")
+    message(FATAL_ERROR
+        "The selected Cwhip SDK at '${Cwhip_PREFIX}' must provide "
+        "Cwhip_SDK_ABI=numeric-v2 (reported '${Cwhip_SDK_ABI}'). "
+        "Rebuild and reinstall the numeric-v2 Cwhip SDK, or select it with CWHIP_SDK.")
 endif()
 if(NOT COMMAND cwhip_apply_application_defaults)
     message(FATAL_ERROR

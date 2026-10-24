@@ -289,6 +289,35 @@ def test_errors_and_limits(root):
             f"256-pass non-convergence limit failed: {result!r}")
 
 
+def test_numeric_migration_boundaries(root):
+    source = root / "numeric boundaries.cw"
+    parameters = ", ".join(f"p{index}" for index in range(140))
+    arguments = ", ".join(str(index) for index in range(140))
+    source.write_text(
+        f".define last({parameters}) {{@p139}}\n"
+        f"@last({arguments})\n"
+        ".define echo(value) {@value}\n"
+        '@echo("\\x7f\\x41")\n'
+        ".if (18446744073709551616 > 18446744073709551615) {above uint64}\n"
+        ".if (-9223372036854775809 < -9223372036854775808) {below int64}\n"
+        ".if (+000128 == 128 AND -129 < -128) {decimal boundaries}\n"
+        ".if (0000000000000000000000000000000000000000) {wrong}\n",
+        encoding="utf-8",
+    )
+    result = invoke(source, env=dict(os.environ, MACRO_PATH=""))
+    require(result.returncode == 0 and
+            result.stdout == ("\n139\n\n\x7fA\nabove uint64\n"
+                              "below int64\ndecimal boundaries\n\n"),
+            f"wide indices, byte arithmetic, or decimal semantics changed: {result!r}")
+
+    source.write_text("\n" * 130 + " " * 140 + '.error "wide position"\n',
+                      encoding="utf-8")
+    result = invoke(source)
+    require(result.returncode == 1 and "CMACRO1003" in result.stderr and
+            f"{source}:131:141:" in result.stderr and result.stdout == "",
+            f"source positions beyond int8 range changed: {result!r}")
+
+
 def test_text_fidelity(root):
     source = root / "café 雪-crlf.cw"
     expected = "café 雪\r\nline two\n\n"
@@ -309,6 +338,7 @@ def main():
         test_cli_defines_and_output(root)
         test_import_search_and_cycles(root)
         test_errors_and_limits(root)
+        test_numeric_migration_boundaries(root)
         test_text_fidelity(root)
     print("cmacros CLI conformance tests passed")
 
