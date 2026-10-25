@@ -83,20 +83,37 @@ prefix and build configuration; `DESTDIR` staging does not register staged
 paths. Consumers do not share the SDK build directory or inherit arbitrary
 compiler flags. cmacros never installs into the SDK during configuration.
 
-The repository's `scripts/setup` opens a project shell and configures the
-`build` directory. With no argument it inherits the SDK default or retains the
-cached build type. Explicit `debug`, `release`, or `profile` arguments pass
+The repository's `scripts/setup [--clean] [debug|release|profile]` configures the
+`build` directory and opens a Bash project shell. With no build-type argument it
+inherits the SDK default or retains the cached build type. Explicit `debug`,
+`release`, or `profile` arguments pass
 `Debug`, `Release`, or `RelWithDebInfo` as overrides; set `CWHIP_SDK` first when
 the SDK is outside normal discovery. The shell exports the configured type as
 `CWHIP_BUILD_TYPE` and its lowercase mode as `_BUILD_TYPE` (`default` when empty).
 
+`--clean` can appear before or after the build type. It runs `scripts/clean`
+before configuration, removing `bin/`, `build/`, `lib/`, `doc/out/`, and `share/`.
+This discards the old cache and generated package locks as well as compiled
+outputs. Unknown or repeated arguments are errors. Exit an active project shell
+before rerunning setup; nested project shells are rejected before any cleanup.
+
 ## Build and test
 
 ```sh
-cmake -S . -B build
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
+scripts/setup --clean profile
+# In the project shell (initially in build/):
+build
+ctest --output-on-failure
 ```
+
+`build [TARGET...]` and `rebuild [TARGET...]` are Bash functions loaded by
+`.project_env`, not standalone scripts. Both use the checkout's `build/` directory
+regardless of the current directory (or `_PROJECT_BUILD_DIR` when explicitly
+set), forward optional target names, and return CMake's exit status without
+exiting the shell. `rebuild` uses CMake's `--clean-first`; it preserves the
+configuration. `clean` remains a script on the project shell's PATH and removes
+all default generated directories. After `clean`, exit the shell and run
+`scripts/setup` again to recreate the build directory.
 
 The executable is written under `bin/`. CTest launches the actual Cwhip
 executable through `tests/test_cli.py` and installs/relocates it in a temporary
@@ -110,7 +127,9 @@ The `cmacros-cwhip-output` regression also expands, compiles, and runs the
 current-syntax example with the same selected SDK in a fresh temporary project.
 
 To keep SDK selection, package locks, and build artifacts private (for example
-when validating a newly installed SDK), use a fresh build directory:
+when validating a newly installed SDK), use a fresh build directory. This
+advanced out-of-tree workflow uses raw CMake because setup intentionally
+configures only the checkout's default `build/` directory:
 
 ```sh
 work=$(mktemp -d /tmp/cmacros-validation.XXXXXX)
@@ -136,9 +155,12 @@ and cache handling, and project-shell setup without touching user configuration.
 ## Install and relocate
 
 ```sh
-cmake --install build --prefix /tmp/cmacros-install
+# In the project shell, after build:
+cmake --install . --prefix /tmp/cmacros-install
 /tmp/cmacros-install/bin/cmacros --version
 ```
+
+Installation uses raw CMake because the project shell has no install wrapper.
 
 The CLI is installed as a single executable at `bin/cmacros`. It has no
 runtime dependency on the source or build tree. Relocating the install prefix

@@ -36,6 +36,10 @@ class DiscoveryTests(unittest.TestCase):
         self.env.pop("CMAKE_PREFIX_PATH", None)
         self.env.pop("CMAKE_INSTALL_PREFIX", None)
         self.env.pop("CMAKE_BUILD_TYPE", None)
+        for name in ("_PROJECT_LOC", "_PROJECT_BUILD_DIR", "_BUILD_TYPE",
+                     "CWHIP_BUILD_TYPE"):
+            self.env.pop(name, None)
+        self.env["CWHIP_REGISTER_SDK"] = "OFF"
 
     def make_sdk(self, name):
         prefix = self.root / name
@@ -216,14 +220,19 @@ class DiscoveryTests(unittest.TestCase):
         log = self.root / "shell-type"
         shell = tools / "bash"
         shell.write_text(
-            f'#!/bin/sh\nprintf "%s:%s" "$_BUILD_TYPE" "$CWHIP_BUILD_TYPE" > "{log}"\n')
+            '#!/bin/sh\n'
+            'if [ "$1" != "--rcfile" ]; then exec /bin/bash "$@"; fi\n'
+            f'printf "%s:%s" "$_BUILD_TYPE" "$CWHIP_BUILD_TYPE" > "{log}"\n')
         shell.chmod(0o755)
         self.env["PATH"] = str(tools) + os.pathsep + self.env["PATH"]
         self.write_prefix(self.new, self.sdk)
         for arguments, expected in (
                 ((), "profile:RelWithDebInfo"), (("debug",), "debug:Debug"),
                 ((), "debug:Debug"), (("release",), "release:Release"),
-                (("profile",), "profile:RelWithDebInfo")):
+                (("profile",), "profile:RelWithDebInfo"),
+                (("--clean", "debug"), "debug:Debug"),
+                (("release", "--clean"), "release:Release"),
+                (("--clean",), "profile:RelWithDebInfo")):
             with self.subTest(arguments=arguments, expected=expected):
                 result = subprocess.run(
                     ["/bin/bash", str(project / "scripts/setup"), *arguments],
@@ -365,8 +374,12 @@ class DiscoveryTests(unittest.TestCase):
         cmake_log = self.root / "cmake-sdk"
         for name, destination in (("bash", log), ("cmake", cmake_log)):
             executable = tools / name
+            passthrough = (
+                'if [ "$1" != "--rcfile" ]; then exec /bin/bash "$@"; fi\n'
+                if name == "bash" else "")
             executable.write_text(
-                f'#!/bin/sh\nprintf "%s" "$CWHIP_SDK" > "{destination}"\n',
+                f'#!/bin/sh\n{passthrough}'
+                f'printf "%s" "$CWHIP_SDK" > "{destination}"\n',
                 encoding="utf-8")
             executable.chmod(0o755)
         self.env["PATH"] = str(tools) + os.pathsep + self.env["PATH"]
@@ -393,6 +406,145 @@ class DiscoveryTests(unittest.TestCase):
         result = subprocess.run(setup, env=self.env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(log.read_text(), self.env["CWHIP_SDK"])
+
+    def setup_fixture(self):
+        project = self.root / "project with spaces"
+        shutil.copytree(PROJECT / "scripts", project / "scripts")
+        shutil.copy2(PROJECT / ".project_env", project / ".project_env")
+        tools = self.root / "tools"
+        tools.mkdir()
+        self.env["PATH"] = str(tools) + os.pathsep + self.env["PATH"]
+        self.env["CWHIP_SDK"] = str(self.sdk)
+        self.env["SCRIPT_LOG"] = str(self.root / "commands.jsonl")
+        cmake = tools / "cmake"
+        cmake.write_text(
+            f"#!{sys.executable}\n"
+            "import json, os, pathlib, sys\n"
+            "with open(os.environ['SCRIPT_LOG'], 'a') as stream:\n"
+            "    stream.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "if '--build' not in sys.argv:\n"
+            "    build = pathlib.Path(sys.argv[sys.argv.index('-B') + 1])\n"
+            "    if os.environ.get('EXPECT_CLEAN'):\n"
+            "        assert not any((build.parent / name).exists()\n"
+            "                       for name in ('build', 'bin', 'lib', 'doc/out', 'share'))\n"
+            "    build.mkdir(parents=True, exist_ok=True)\n"
+            "    (build / 'CMakeCache.txt').write_text('CMAKE_BUILD_TYPE:STRING=Debug\\n')\n"
+            "sys.exit(int(os.environ.get('CMAKE_STATUS', '0')))\n")
+        cmake.chmod(0o755)
+        shell = tools / "bash"
+        shell.write_text(
+            '#!/bin/sh\n'
+            'if [ "$1" != "--rcfile" ]; then exec /bin/bash "$@"; fi\n'
+            f'touch "{self.root / "shell-started"}"\n')
+        shell.chmod(0o755)
+        return project
+
+    def run_setup(self, project, *arguments):
+        return subprocess.run(
+            ["/bin/bash", str(project / "scripts/setup"), *arguments],
+            cwd=self.root, env=self.env, capture_output=True, text=True)
+
+    def test_setup_cleans_all_generated_outputs_only_when_requested(self):
+        project = self.setup_fixture()
+        outputs = ("build", "bin", "lib", "doc/out", "share")
+        for directory in outputs:
+            path = project / directory
+            path.mkdir(parents=True)
+            (path / "stale").write_text("generated")
+        source = project / "src/main.cw"
+        source.parent.mkdir()
+        source.write_text("source")
+        for arguments, cleaned in (((), False), (("--clean",), True)):
+            self.env["EXPECT_CLEAN"] = "1" if cleaned else ""
+            result = self.run_setup(project, *arguments)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            for directory in outputs:
+                self.assertEqual((project / directory / "stale").exists(), not cleaned)
+            self.assertEqual(source.read_text(), "source")
+            self.assertTrue((project / "build/CMakeCache.txt").exists())
+        # Failure after cleanup still leaves no stale outputs or project shell.
+        (self.root / "shell-started").unlink()
+        self.env["CMAKE_STATUS"] = "9"
+        result = self.run_setup(project, "--clean")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("CMake configuration failed", result.stderr)
+        self.assertFalse((self.root / "shell-started").exists())
+
+    def test_setup_rejects_arguments_and_active_shell_before_cleanup(self):
+        project = self.setup_fixture()
+        sentinel = project / "bin/keep"
+        sentinel.parent.mkdir()
+        sentinel.write_text("keep")
+        for arguments in (("unknown",), ("--clean", "--clean"),
+                          ("debug", "release"), ("--clean", "--unknown")):
+            with self.subTest(arguments=arguments):
+                result = self.run_setup(project, *arguments)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("Usage:", result.stderr)
+                self.assertTrue(sentinel.exists())
+        self.env["_PROJECT_NAME"] = "existing"
+        result = self.run_setup(project, "--clean", "invalid")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("already active (existing)", result.stderr)
+        self.assertTrue(sentinel.exists())
+        self.assertFalse(Path(self.env["SCRIPT_LOG"]).exists())
+        self.assertFalse((self.root / "shell-started").exists())
+
+    def test_failed_cleanup_does_not_configure_or_start_shell(self):
+        project = self.setup_fixture()
+        (project / "scripts/clean").write_text(
+            "#!/bin/sh\nprintf 'cleanup failed\\n' >&2\nexit 7\n")
+        result = self.run_setup(project, "--clean")
+        self.assertEqual(result.returncode, 7)
+        self.assertIn("cleanup failed", result.stderr)
+        self.assertFalse(Path(self.env["SCRIPT_LOG"]).exists())
+        self.assertFalse((self.root / "shell-started").exists())
+
+    def test_explicit_settings_path_is_authoritative(self):
+        selected = self.root / "explicit.toml"
+        self.write_prefix(selected, self.sdk)
+        self.write_prefix(self.new, self.other)
+        self.env["CWHIP_SDK"] = str(self.other)
+        result = subprocess.run(
+            [sys.executable, str(PROJECT / "scripts/sdk-prefix.py"), str(selected)],
+            env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, str(self.sdk))
+
+    def test_build_functions_forward_targets_directory_and_status(self):
+        project = self.setup_fixture()
+        (project / "build").mkdir()
+        self.env.update(_PROJECT_LOC=str(project), _PROJECT_NAME="test",
+                        _BUILD_TYPE="debug")
+        commands = (
+            f'source "{project / ".project_env"}"\n'
+            'declare -F build rebuild >/dev/null || exit 90\n'
+            'cd / || exit 91\n'
+            'build || exit 92\n'
+            'rebuild || exit 93\n'
+            'build "first target" second || exit 94\n'
+            'rebuild "first target" second || exit 95\n'
+            f'export _PROJECT_BUILD_DIR="{self.root / "custom build"}"\n'
+            'build custom || exit 96\n'
+            'export CMAKE_STATUS=17\n'
+            'build; result=$?; test "$result" = 17 || exit 97\n'
+            'rebuild custom; result=$?; test "$result" = 17 || exit 98\n'
+            'printf "shell survived\\n"\n')
+        result = subprocess.run(
+            ["/bin/bash", "--noprofile", "--norc", "-c", commands],
+            env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("shell survived", result.stdout)
+        calls = [json.loads(line) for line in
+                 Path(self.env["SCRIPT_LOG"]).read_text().splitlines()]
+        default = ["--build", str(project / "build"), "--parallel", "12"]
+        custom = ["--build", str(self.root / "custom build"), "--parallel", "12"]
+        self.assertEqual(calls, [
+            default, default + ["--clean-first"],
+            default + ["--target", "first target", "second"],
+            default + ["--clean-first", "--target", "first target", "second"],
+            custom + ["--target", "custom"], custom,
+            custom + ["--clean-first", "--target", "custom"]])
 
 
 if __name__ == "__main__":
