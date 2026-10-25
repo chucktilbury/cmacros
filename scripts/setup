@@ -8,49 +8,112 @@ if [[ -n "${_PROJECT_NAME:-}" ]]; then
     exit 1
 fi
 
-if (( $# > 1 )); then
-    printf 'Usage: %s [debug|release|profile]\n' "$0" >&2
+usage() {
+    printf 'Usage: %s [--clean] [debug|release|profile]\n' "$0" >&2
     exit 2
-fi
+}
 
-build_type="${1:-}"
+clean_first=false
+build_type=""
+for arg in "$@"; do
+    case "$arg" in
+        --clean)
+            if [[ "$clean_first" == true ]]; then
+                usage
+            fi
+            clean_first=true
+            ;;
+        debug|release|profile)
+            if [[ -n "$build_type" ]]; then
+                usage
+            fi
+            build_type="$arg"
+            ;;
+        *)
+            printf 'Unknown argument: %s\n' "$arg" >&2
+            usage
+            ;;
+    esac
+done
+
 case "$build_type" in
-    "") cmake_build_type="" ;;
-    debug) cmake_build_type=Debug ;;
-    release) cmake_build_type=Release ;;
-    profile) cmake_build_type=RelWithDebInfo ;;
-    *)
-        printf 'Unknown build type: %s\nUsage: %s [debug|release|profile]\n' \
-            "$build_type" "$0" >&2
-        exit 2
+    "")
+        cmake_build_type=""
+        ;;
+    debug)
+        cmake_build_type=Debug
+        ;;
+    release)
+        cmake_build_type=Release
+        ;;
+    profile)
+        cmake_build_type=RelWithDebInfo
         ;;
 esac
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 build_dir="$project_root/build"
+
+if [[ "$clean_first" == true ]]; then
+    "$project_root/scripts/clean"
+fi
+
 if [[ -z "${CWHIP_SDK:-}" ]]; then
-    sdk_prefix="$(python3 "$project_root/scripts/sdk-prefix.py")"
-    if [[ -n "$sdk_prefix" ]]; then
-        export CWHIP_SDK="$sdk_prefix"
+    config_home="${XDG_CONFIG_HOME:-}"
+    if [[ -z "$config_home" && -n "${HOME:-}" ]]; then
+        config_home="$HOME/.config"
+    fi
+    if [[ -n "$config_home" && "$config_home" != /* ]]; then
+        printf "Cannot discover sdk_prefix: config home '%s' is not absolute.\n" \
+            "$config_home" >&2
+        exit 1
+    fi
+    settings="$config_home/cwhip/sdk.toml"
+    if [[ ! -e "$settings" && ! -L "$settings" ]]; then
+        settings="$config_home/cwhip/settings.toml"
+    fi
+    if [[ -n "$config_home" && ( -e "$settings" || -L "$settings" ) ]]; then
+        if ! sdk_prefix="$(python3 "$project_root/scripts/sdk-prefix.py" "$settings")"; then
+            printf 'SDK settings discovery failed; project shell was not started.\n' >&2
+            exit 1
+        fi
+        if [[ -n "$sdk_prefix" ]]; then
+            export CWHIP_SDK="$sdk_prefix"
+        fi
     fi
 fi
 
 export _PROJECT_LOC="$project_root"
 export _PROJECT_NAME="$(basename -- "$project_root")"
+
 cmake_args=()
 if [[ -n "$cmake_build_type" ]]; then
     cmake_args+=("-DCMAKE_BUILD_TYPE=$cmake_build_type")
 fi
-cmake -S "$project_root" -B "$build_dir" "${cmake_args[@]}"
+if ! cmake -S "$project_root" -B "$build_dir" "${cmake_args[@]}"; then
+    printf 'CMake configuration failed; project shell was not started.\n' >&2
+    exit 1
+fi
 
 cmake_build_type="$(sed -n 's/^CMAKE_BUILD_TYPE:[^=]*=//p' "$build_dir/CMakeCache.txt" | head -n 1)"
 case "$cmake_build_type" in
-    Debug) build_type=debug ;;
-    Release) build_type=release ;;
-    RelWithDebInfo) build_type=profile ;;
-    "") build_type=default ;;
-    *) build_type="${cmake_build_type,,}" ;;
+    Debug)
+        build_type=debug
+        ;;
+    Release)
+        build_type=release
+        ;;
+    RelWithDebInfo)
+        build_type=profile
+        ;;
+    "")
+        build_type=default
+        ;;
+    *)
+        build_type="${cmake_build_type,,}"
+        ;;
 esac
 export _BUILD_TYPE="$build_type"
 export CWHIP_BUILD_TYPE="$cmake_build_type"
+
 bash --rcfile "$project_root/.project_env" -i

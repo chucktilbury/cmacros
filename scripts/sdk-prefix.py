@@ -6,6 +6,9 @@ import sys
 
 
 def main():
+    if len(sys.argv) > 1:
+        return read_prefix(Path(sys.argv[1]))
+
     prefix = os.environ.get("CWHIP_SDK", "")
     if prefix:
         sys.stdout.write(prefix)
@@ -36,6 +39,10 @@ def main():
         print(f"{settings}: cannot read sdk_prefix: {error}", file=sys.stderr)
         return 1
 
+    return read_prefix(settings)
+
+
+def read_prefix(settings):
     try:
         import tomllib
     except ModuleNotFoundError:
