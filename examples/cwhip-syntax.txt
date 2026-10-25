@@ -1,0 +1,38 @@
+.define ACTION {int64<int64>}
+.define RESULT(value) {return(@value)}
+class Worker {
+    int64 base = 40
+    int64 add(int64 value) {
+        @RESULT(base + value)
+    }
+}
+
+start {
+    # Current Cwhip source can be generated without rewriting its syntax.
+    Worker worker = Worker()
+    @ACTION action = worker.add
+    int64<> zeroArguments = null
+    int64<int64><String> recursiveSignature = null
+    int callback = 42
+    uint mask = 3
+    float fraction = 0.5
+    dict empty = [:]
+    dict values = [
+        "answer": int64(40),
+    ]
+    list items = [
+        int64(2),
+    ]
+    int64 native = 0
+    inline(int64 native) {
+        *native = 2;
+    }
+    if (callback == 0) {
+        raise(Exception("wrong branch"))
+    } else (mask & 1 == 1 and fraction > 0.0) {
+        print("{}\n", action(native))
+    } else {
+        raise(Exception("bitwise precedence changed"))
+    }
+    print("{}\n", (values["answer"] as int64) + (items[0] as int64))
+}
