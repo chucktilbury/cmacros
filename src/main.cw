@@ -91,43 +91,43 @@ class Processor {
 
     int64 byte(String text, int64 index) {
         if (index < 0 or index >= text.length) {
-            return -1
+            return(-1)
         }
-        return int64(text.byteAt(index))
+        return(int64(text.byteAt(index)))
     }
 
     int64 utf8Width(int64 firstByte) {
         if (firstByte >= 240) {
-            return 4
+            return(4)
         }
         if (firstByte >= 224) {
-            return 3
+            return(3)
         }
         if (firstByte >= 192) {
-            return 2
+            return(2)
         }
-        return 1
+        return(1)
     }
 
     bool nameStart(int64 value) {
-        return ((value >= 65 and value <= 90) or
-                (value >= 97 and value <= 122) or value == 95)
+        return((value >= 65 and value <= 90) or
+               (value >= 97 and value <= 122) or value == 95)
     }
 
     bool namePart(int64 value) {
-        return nameStart(value) or (value >= 48 and value <= 57)
+        return(nameStart(value) or (value >= 48 and value <= 57))
     }
 
     bool space(int64 value) {
-        return (value == 32 or value == 9 or value == 10 or
-                value == 13 or value == 12 or value == 11)
+        return(value == 32 or value == 9 or value == 10 or
+               value == 13 or value == 12 or value == 11)
     }
 
     int64 skipSpace(String text, int64 index) {
         while (index < text.length and space(byte(text, index))) {
             index = index + 1
         }
-        return index
+        return(index)
     }
 
     int64 skipHorizontal(String text, int64 index) {
@@ -136,7 +136,7 @@ class Processor {
                 byte(text, index) == 13)) {
             index = index + 1
         }
-        return index
+        return(index)
     }
 
     int64 lineAfter(String text, int64 fromIndex, int64 end, int64 startLine) {
@@ -148,7 +148,7 @@ class Processor {
             }
             cursor = cursor + 1
         }
-        return line
+        return(line)
     }
 
     int64 columnAfter(String text, int64 fromIndex, int64 end, int64 startColumn) {
@@ -167,7 +167,7 @@ class Processor {
                 cursor = cursor + width
             }
         }
-        return column
+        return(column)
     }
 
     String readName(String text, int64 first, int64 last) {
@@ -175,7 +175,7 @@ class Processor {
         while (end < last and namePart(byte(text, end))) {
             end = end + 1
         }
-        return text.slice(first, end)
+        return(text.slice(first, end))
     }
 
     int64 nameEnd(String text, int64 first) {
@@ -183,21 +183,21 @@ class Processor {
         while (end < text.length and namePart(byte(text, end))) {
             end = end + 1
         }
-        return end
+        return(end)
     }
 
     bool validName(String name) {
         if (name.length == 0 or not nameStart(byte(name, 0))) {
-            return false
+            return(false)
         }
         int64 index = 1
         while (index < name.length) {
             if (not namePart(byte(name, index))) {
-                return false
+                return(false)
             }
             index = index + 1
         }
-        return true
+        return(true)
     }
 
     Macro findMacro(String name) {
@@ -205,11 +205,11 @@ class Processor {
         while (index < macros.length) {
             Macro macro = macros[index] as Macro
             if (macro.name.equals(name)) {
-                return macro
+                return(macro)
             }
             index = index + 1
         }
-        return null
+        return(null)
     }
 
     int64 findParameter(list names, String name) {
@@ -217,11 +217,11 @@ class Processor {
         while (index < names.length) {
             String current = names[index] as String
             if (current.equals(name)) {
-                return index
+                return(index)
             }
             index = index + 1
         }
-        return -1
+        return(-1)
     }
 
     void report(int64 code, String file, int64 line, int64 column, String message) {
@@ -255,14 +255,14 @@ class Processor {
         while (cacheIndex < cachedPaths.length) {
             String cachedPath = cachedPaths[cacheIndex] as String
             if (cachedPath.equals(path)) {
-                return cachedContents[cacheIndex] as String
+                return(cachedContents[cacheIndex] as String)
             }
             cacheIndex = cacheIndex + 1
         }
         int64 size = Sys.FileSystem().fileSize(path)
         if (size > 16777216) {
             report(2001, path, line, 1, "input exceeds the 16 MiB source limit")
-            return ""
+            return("")
         }
         String content = ""
         try {
@@ -276,35 +276,35 @@ class Processor {
             cachedPaths.append(path)
             cachedContents.append(content)
         }
-        return content
+        return(content)
     }
 
     int64 definitionCount() {
-        return macros.length
+        return(macros.length)
     }
 
     String resolveImport(String currentFile, String requested) {
         Sys.FileSystem fs = Sys.FileSystem()
         String local = fs.join(fs.dirname(currentFile), requested)
         if (fs.isFile(local)) {
-            return fs.absolutePath(local)
+            return(fs.absolutePath(local))
         }
         if (fs.isFile(format("{}.txt", local))) {
-            return fs.absolutePath(format("{}.txt", local))
+            return(fs.absolutePath(format("{}.txt", local)))
         }
         int64 index = 0
         while (index < includePaths.length) {
             String directory = includePaths[index] as String
             String candidate = fs.join(directory, requested)
             if (fs.isFile(candidate)) {
-                return fs.absolutePath(candidate)
+                return(fs.absolutePath(candidate))
             }
             if (fs.isFile(format("{}.txt", candidate))) {
-                return fs.absolutePath(format("{}.txt", candidate))
+                return(fs.absolutePath(format("{}.txt", candidate)))
             }
             index = index + 1
         }
-        return ""
+        return("")
     }
 
     bool inList(list values, String name) {
@@ -312,11 +312,11 @@ class Processor {
         while (index < values.length) {
             String value = values[index] as String
             if (value.equals(name)) {
-                return true
+                return(true)
             }
             index = index + 1
         }
-        return false
+        return(false)
     }
 
     String processFile(String file, list imports, list active, int64 depth) {
@@ -324,23 +324,23 @@ class Processor {
         currentImports = imports
         if (failed) {
             currentImports = parentImports
-            return ""
+            return("")
         }
         if (depth > 128) {
             report(2002, file, 1, 1, "maximum import nesting depth (128) exceeded")
             currentImports = parentImports
-            return ""
+            return("")
         }
         String canonical = Sys.FileSystem().absolutePath(file)
         if (canonical.length == 0) {
             report(2000, file, 1, 1, "cannot resolve source path")
             currentImports = parentImports
-            return ""
+            return("")
         }
         if (inList(imports, canonical)) {
             report(2003, file, 1, 1, "import cycle detected")
             currentImports = parentImports
-            return ""
+            return("")
         }
         list nestedImports = []
         int64 importIndex = 0
@@ -354,7 +354,7 @@ class Processor {
         String output = processText(canonical, content, 1, 1, [], [], active,
                                     nestedImports, depth)
         currentImports = parentImports
-        return output
+        return(output)
     }
 
     Arguments parseArguments(String text, int64 open) {
@@ -393,7 +393,7 @@ class Processor {
                                 String value = text.slice(valueStart, index).trim()
                                 if (value.length > 0 or result.length > 0) {
                                     if (not validArgumentLiteral(value)) {
-                                        return Arguments([], open, false)
+                                        return(Arguments([], open, false))
                                     }
                                     result.append(unquote(value))
                                 }
@@ -420,7 +420,7 @@ class Processor {
                                                 String value = text.slice(
                                                     valueStart, index).trim()
                                                 if (not validArgumentLiteral(value)) {
-                                                    return Arguments([], open, false)
+                                                    return(Arguments([], open, false))
                                                 }
                                                 result.append(unquote(value))
                                                 valueStart = index + 1
@@ -436,20 +436,20 @@ class Processor {
             index = index + 1
         }
         if (not finished) {
-            return Arguments([], open, false)
+            return(Arguments([], open, false))
         }
         if (quote != 0 or parens != 0 or brackets != 0 or braces != 0) {
-            return Arguments([], open, false)
+            return(Arguments([], open, false))
         }
-        return Arguments(result, index, true)
+        return(Arguments(result, index, true))
     }
 
     bool validArgumentLiteral(String value) {
         if (value.length > 0 and (byte(value, 0) == 34 or byte(value, 0) == 39)) {
             LiteralValue parsed = parseLiteral(value, 0)
-            return parsed.valid and parsed.end == value.length
+            return(parsed.valid and parsed.end == value.length)
         }
-        return true
+        return(true)
     }
 
     String unquote(String value) {
@@ -458,41 +458,41 @@ class Processor {
              (byte(value, 0) == 39 and byte(value, value.length - 1) == 39))) {
             LiteralValue decoded = parseLiteral(value, 0)
             if (decoded.valid) {
-                return decoded.value
+                return(decoded.value)
             }
         }
-        return value
+        return(value)
     }
 
     int64 hexValue(int64 value) {
         if (value >= 48 and value <= 57) {
-            return value - 48
+            return(value - 48)
         }
         if (value >= 65 and value <= 70) {
-            return value - 55
+            return(value - 55)
         }
         if (value >= 97 and value <= 102) {
-            return value - 87
+            return(value - 87)
         }
-        return -1
+        return(-1)
     }
 
     LiteralValue parseLiteral(String text, int64 open) {
         int64 quote = byte(text, open)
         if (quote != 34 and quote != 39) {
-            return LiteralValue("", open, false)
+            return(LiteralValue("", open, false))
         }
         String result = ""
         int64 index = open + 1
         while (index < text.length) {
             int64 current = byte(text, index)
             if (current == quote) {
-                return LiteralValue(result, index + 1, true)
+                return(LiteralValue(result, index + 1, true))
             }
             if (current == 92) {
                 index = index + 1
                 if (index >= text.length) {
-                    return LiteralValue("", open, false)
+                    return(LiteralValue("", open, false))
                 }
                 int64 escaped = byte(text, index)
                 if (escaped == 110) {
@@ -521,12 +521,12 @@ class Processor {
                                             } else {
                                                 if (escaped == 120) {
                                                     if (index + 2 >= text.length) {
-                                                        return LiteralValue("", open, false)
+                                                        return(LiteralValue("", open, false))
                                                     }
                                                     int64 high = hexValue(byte(text, index + 1))
                                                     int64 low = hexValue(byte(text, index + 2))
                                                     if (high < 0 or low < 0) {
-                                                        return LiteralValue("", open, false)
+                                                        return(LiteralValue("", open, false))
                                                     }
                                                     result.append(format("{:c}", high * 16 + low))
                                                     index = index + 2
@@ -548,36 +548,36 @@ class Processor {
                 index = index + width
             }
         }
-        return LiteralValue("", open, false)
+        return(LiteralValue("", open, false))
     }
 
     bool wordBoundary(String text, int64 index) {
         if (index < 0 or index >= text.length) {
-            return true
+            return(true)
         }
         int64 value = byte(text, index)
-        return space(value) or value == 40 or value == 41
+        return(space(value) or value == 40 or value == 41)
     }
 
     int64 operatorPriority(String operator) {
         String upper = operator.toUpper()
         if (upper.equals("OR") or operator.equals("||")) {
-            return 1
+            return(1)
         }
         if (upper.equals("AND") or operator.equals("&&")) {
-            return 2
+            return(2)
         }
         if (upper.equals("==") or operator.equals("!=") or
             upper.equals("EQ") or upper.equals("NEQ")) {
-            return 3
+            return(3)
         }
         if (operator.equals("<") or operator.equals(">") or
             operator.equals("<=") or operator.equals(">=") or
             upper.equals("LT") or upper.equals("GT") or
             upper.equals("LTE") or upper.equals("GTE")) {
-            return 4
+            return(4)
         }
-        return 0
+        return(0)
     }
 
     String operatorAt(String text, int64 index) {
@@ -585,7 +585,7 @@ class Processor {
             String pair = text.slice(index, index + 2)
             if (pair.equals("||") or pair.equals("&&") or pair.equals("==") or
                 pair.equals("!=") or pair.equals("<=") or pair.equals(">=")) {
-                return pair
+                return(pair)
             }
         }
         int64 remaining = text.length - index
@@ -594,7 +594,7 @@ class Processor {
             if ((word.equals("AND") or word.equals("NEQ") or
                  word.equals("LTE") or word.equals("GTE")) and
                 wordBoundary(text, index - 1) and wordBoundary(text, index + 3)) {
-                return word
+                return(word)
             }
         }
         if (remaining >= 2) {
@@ -602,14 +602,14 @@ class Processor {
             if ((word.equals("OR") or word.equals("EQ") or
                  word.equals("LT") or word.equals("GT")) and
                 wordBoundary(text, index - 1) and wordBoundary(text, index + 2)) {
-                return word
+                return(word)
             }
         }
         if (text.slice(index, index + 1).equals("<") or
             text.slice(index, index + 1).equals(">")) {
-            return text.slice(index, index + 1)
+            return(text.slice(index, index + 1))
         }
-        return ""
+        return("")
     }
 
     Operator findOperator(String expression, int64 wantedPriority) {
@@ -654,13 +654,13 @@ class Processor {
             }
             index = index + 1
         }
-        return found
+        return(found)
     }
 
     bool wrapsWholeExpression(String expression) {
         if (expression.length < 2 or byte(expression, 0) != 40 or
             byte(expression, expression.length - 1) != 41) {
-            return false
+            return(false)
         }
         int64 depth = 0
         int64 index = 0
@@ -690,7 +690,7 @@ class Processor {
                         if (current == 41) {
                             depth = depth - 1
                             if (depth == 0 and index < expression.length - 1) {
-                                return false
+                                return(false)
                             }
                         }
                     }
@@ -698,27 +698,27 @@ class Processor {
             }
             index = index + 1
         }
-        return depth == 0
+        return(depth == 0)
     }
 
     bool decimalNumber(String value) {
         if (value.length == 0) {
-            return false
+            return(false)
         }
         int64 index = 0
         if (byte(value, 0) == 45 or byte(value, 0) == 43) {
             index = 1
         }
         if (index == value.length) {
-            return false
+            return(false)
         }
         while (index < value.length) {
             if (byte(value, index) < 48 or byte(value, index) > 57) {
-                return false
+                return(false)
             }
             index = index + 1
         }
-        return true
+        return(true)
     }
 
     bool decimalZero(String value) {
@@ -728,11 +728,11 @@ class Processor {
         }
         while (index < value.length) {
             if (byte(value, index) != 48) {
-                return false
+                return(false)
             }
             index = index + 1
         }
-        return true
+        return(true)
     }
 
     int64 compareDecimals(String left, String right) {
@@ -777,37 +777,37 @@ class Processor {
             }
         }
         if (leftNegative and not rightNegative) {
-            return -1
+            return(-1)
         }
         if (not leftNegative and rightNegative) {
-            return 1
+            return(1)
         }
         if (leftNegative) {
-            return -magnitude
+            return(-magnitude)
         }
-        return magnitude
+        return(magnitude)
     }
 
     bool valueTruth(String value) {
         String trimmed = value.trim()
         if (trimmed.length == 0) {
-            return false
+            return(false)
         }
         if (decimalNumber(trimmed)) {
-            return not decimalZero(trimmed)
+            return(not decimalZero(trimmed))
         }
-        return true
+        return(true)
     }
 
     bool evalCondition(String expression, int64 recursion) {
         if (recursion > 128) {
             conditionError("conditional expression nesting limit (128) exceeded")
-            return false
+            return(false)
         }
         String value = expression.trim()
         if (value.length == 0) {
             conditionError("empty conditional expression or operand")
-            return false
+            return(false)
         }
         int64 nesting = 0
         int64 scan = 0
@@ -839,7 +839,7 @@ class Processor {
                             if (nesting < 0) {
                                 conditionError(
                                     "unbalanced parentheses in conditional expression")
-                                return false
+                                return(false)
                             }
                         }
                     }
@@ -849,7 +849,7 @@ class Processor {
         }
         if (nesting != 0) {
             conditionError("unbalanced parentheses in conditional expression")
-            return false
+            return(false)
         }
         while (wrapsWholeExpression(value)) {
             value = value.slice(1, value.length - 1).trim()
@@ -859,14 +859,14 @@ class Processor {
             bool left = evalCondition(value.slice(0, operator.index), recursion + 1)
             bool right = evalCondition(value.slice(
                 operator.index + operator.name.length, value.length), recursion + 1)
-            return left or right
+            return(left or right)
         }
         operator = findOperator(value, 2)
         if (operator.index >= 0) {
             bool left = evalCondition(value.slice(0, operator.index), recursion + 1)
             bool right = evalCondition(value.slice(
                 operator.index + operator.name.length, value.length), recursion + 1)
-            return left and right
+            return(left and right)
         }
         operator = findOperator(value, 3)
         if (operator.index >= 0) {
@@ -875,9 +875,9 @@ class Processor {
                                        value.length).trim()
             if (left.length == 0 or right.length == 0) {
                 conditionError("comparison operator requires two operands")
-                return false
+                return(false)
             }
-            return compareCondition(left, right, operator.name)
+            return(compareCondition(left, right, operator.name))
         }
         operator = findOperator(value, 4)
         if (operator.index >= 0) {
@@ -886,32 +886,32 @@ class Processor {
                                        value.length).trim()
             if (left.length == 0 or right.length == 0) {
                 conditionError("comparison operator requires two operands")
-                return false
+                return(false)
             }
-            return compareCondition(left, right, operator.name)
+            return(compareCondition(left, right, operator.name))
         }
         if (value.startsWith("!")) {
             if (value.length == 1) {
                 conditionError("unary ! requires an operand")
-                return false
+                return(false)
             }
-            return not evalCondition(value.slice(1, value.length), recursion + 1)
+            return(not evalCondition(value.slice(1, value.length), recursion + 1))
         }
         if (value.toUpper().startsWith("NOT ")) {
-            return not evalCondition(value.slice(4, value.length), recursion + 1)
+            return(not evalCondition(value.slice(4, value.length), recursion + 1))
         }
         if (value.toUpper().equals("TRUE")) {
-            return true
+            return(true)
         }
         if (value.toUpper().equals("FALSE")) {
-            return false
+            return(false)
         }
         if (not decimalNumber(value) and not value.startsWith("@") and
             (not nameStart(byte(value, 0)) or nameEnd(value, 0) != value.length)) {
             conditionError("invalid token in conditional expression")
-            return false
+            return(false)
         }
-        return valueTruth(resolveConditionValue(value, recursion + 1))
+        return(valueTruth(resolveConditionValue(value, recursion + 1)))
     }
 
     String resolveConditionValue(String expression, int64 recursion) {
@@ -920,7 +920,7 @@ class Processor {
             int64 end = nameEnd(value, 1)
             if (end == 1) {
                 conditionError("expected a macro name after @")
-                return ""
+                return("")
             }
             String name = value.slice(1, end)
             Macro macro = findMacro(name)
@@ -931,12 +931,12 @@ class Processor {
                 if (byte(value, cursor) != 40 or macro == null or
                     not macro.functionLike) {
                     conditionError("invalid text after macro reference in conditional expression")
-                    return ""
+                    return("")
                 }
                 Arguments parsed = parseArguments(value, cursor)
                 if (not parsed.valid or parsed.end != value.length) {
                     conditionError("invalid macro argument list in conditional expression")
-                    return ""
+                    return("")
                 }
                 arguments = parsed.values
                 afterReference = parsed.end
@@ -944,16 +944,16 @@ class Processor {
                 if (macro != null and macro.functionLike and
                     macro.parameters.length > 0) {
                     conditionError(format("macro '{}' requires an argument list", name))
-                    return ""
+                    return("")
                 }
             }
             if (macro == null) {
-                return ""
+                return("")
             }
             if (arguments.length != macro.parameters.length) {
                 conditionError(format("macro '{}' expects {} argument(s), got {}",
                                       name, macro.parameters.length, arguments.length))
-                return ""
+                return("")
             }
             list active = [name]
             list parentTrace = currentTrace
@@ -971,24 +971,24 @@ class Processor {
                 macro.column, macro.parameters, arguments, active, currentImports,
                 recursion + 1).trim()
             currentTrace = parentTrace
-            return expanded
+            return(expanded)
         }
         if (decimalNumber(value)) {
-            return value
+            return(value)
         }
         if (value.length > 0 and nameStart(byte(value, 0))) {
             if (nameEnd(value, 0) != value.length) {
                 conditionError("invalid token in conditional expression")
-                return ""
+                return("")
             }
             Macro macro = findMacro(value)
             if (macro != null) {
-                return "1"
+                return("1")
             }
-            return "0"
+            return("0")
         }
         conditionError("invalid token in conditional expression")
-        return ""
+        return("")
     }
 
     bool compareCondition(String leftExpression, String rightExpression, String operator) {
@@ -1011,21 +1011,21 @@ class Processor {
         }
         String upper = operator.toUpper()
         if (upper.equals("==") or upper.equals("EQ")) {
-            return equal
+            return(equal)
         }
         if (upper.equals("!=") or upper.equals("NEQ")) {
-            return not equal
+            return(not equal)
         }
         if (upper.equals("<") or upper.equals("LT")) {
-            return less
+            return(less)
         }
         if (upper.equals(">") or upper.equals("GT")) {
-            return greater
+            return(greater)
         }
         if (upper.equals("<=") or upper.equals("LTE")) {
-            return less or equal
+            return(less or equal)
         }
-        return greater or equal
+        return(greater or equal)
     }
 
     int64 closeBrace(String text, int64 open) {
@@ -1074,7 +1074,7 @@ class Processor {
                                 if (current == 125) {
                                     depth = depth - 1
                                     if (depth == 0) {
-                                        return index
+                                        return(index)
                                     }
                                 }
                             }
@@ -1084,7 +1084,7 @@ class Processor {
             }
             index = index + 1
         }
-        return -1
+        return(-1)
     }
 
     int64 closeParen(String text, int64 open) {
@@ -1116,7 +1116,7 @@ class Processor {
                         if (current == 41) {
                             depth = depth - 1
                             if (depth == 0) {
-                                return index
+                                return(index)
                             }
                         }
                     }
@@ -1124,7 +1124,7 @@ class Processor {
             }
             index = index + 1
         }
-        return -1
+        return(-1)
     }
 
     void addDefinition(String name, String body, String file, int64 line, int64 column,
@@ -1186,7 +1186,7 @@ class Processor {
         if (depth > 128) {
             report(1002, file, firstLine, firstColumn,
                    "macro expansion nesting limit (128) exceeded")
-            return output
+            return(output)
         }
         int64 index = 0
         int64 line = firstLine
@@ -1614,7 +1614,7 @@ class Processor {
             report(1002, file, line, column,
                    "unterminated quoted literal")
         }
-        return output
+        return(output)
     }
 
     String process(String input) {
@@ -1630,7 +1630,7 @@ class Processor {
             bool definitionsStable = definitionCount() == definitionsBeforePass
             if (failed or (pass > 0 and definitionsStable and
                            result.equals(previous))) {
-                return result
+                return(result)
             }
             previous = result
             pass = pass + 1
@@ -1639,21 +1639,21 @@ class Processor {
             report(2007, input, 1, 1,
                    "processing did not converge within 256 passes")
         }
-        return result
+        return(result)
     }
 
     bool writeOutput(String path, String text) {
         if (path.length == 0) {
             io.write(text)
             io.flush()
-            return true
+            return(true)
         }
         Sys.FileSystem fs = Sys.FileSystem()
         String temporary = format("{}.cmacros.tmp", path)
         if (fs.exists(temporary)) {
             report(2008, path, 1, 1,
                    format("temporary output path already exists: '{}'", temporary))
-            return false
+            return(false)
         }
         try {
             Sys.File output = Sys.File(temporary, "wb")
@@ -1662,20 +1662,20 @@ class Processor {
             if (written != text.length) {
                 report(2009, path, 1, 1, "failed to write complete output")
                 fs.remove(temporary)
-                return false
+                return(false)
             }
             if (not fs.rename(temporary, path)) {
                 report(2009, path, 1, 1,
                        format("cannot replace output file: {}", Sys.System().lastError()))
                 fs.remove(temporary)
-                return false
+                return(false)
             }
         } except() as message {
             report(2009, path, 1, 1, format("cannot write output: {}", message))
             fs.remove(temporary)
-            return false
+            return(false)
         }
-        return true
+        return(true)
     }
 
     void printHelp() {

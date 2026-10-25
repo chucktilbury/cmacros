@@ -4,6 +4,13 @@ This document defines the language accepted by the `cmacros` CLI. The
 processor preserves UTF-8 text and line endings except where a directive,
 comment, escape, or macro expansion changes them.
 
+The macro input language is distinct from the Cwhip implementation language.
+Braces still delimit `.define` bodies; they are not dictionary literals.
+Replacement text that emits Cwhip must use current Cwhip syntax, such as
+`return(value)`, `int64<int64>`, and `["key": value]`. Native C replacement
+text retains its C syntax, including semicolons. See
+[Examples](EXAMPLES.md) for an expansion that is compiled and run by CTest.
+
 ## Names and definitions
 
 Names start with an ASCII letter or underscore and continue with ASCII

@@ -76,6 +76,9 @@ if(BUILD_TESTING)
     add_test(NAME cmacros-conformance
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cli.py"
             "${cmacros_executable}")
+    add_test(NAME cmacros-cwhip-output
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cwhip_output.py"
+            "${cmacros_executable}" "${CMAKE_COMMAND}" "${Cwhip_PREFIX}")
     add_test(NAME cmacros-install-relocation
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_install.py"
             "${CMAKE_COMMAND}" "${CMAKE_BINARY_DIR}" "$<CONFIG>")

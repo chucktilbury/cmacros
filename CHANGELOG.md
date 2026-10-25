@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Migrate return expressions to current Cwhip syntax and add an exact-output,
+  compile-and-run regression for macros generating current Cwhip source.
+- Keep READMEs as directory guides and consolidate usage and example details
+  under `doc/`, including isolated SDK validation instructions.
 - Migrate implementation integers to `int64` and require Cwhip SDK 0.0.2,
   ABI `numeric-v2`, without changing the macro input language.
 - Identify the selected SDK prefix and give rebuild/reinstall instructions

@@ -8,6 +8,12 @@
   output-directory support and `cwhip_apply_application_defaults()`
 
 Older SDK installations are not compatible with the fixed-width numeric model.
+Use a current SDK built from Cwhip `master`: SDK version 0.0.2 and ABI
+`numeric-v2` are unchanged by the language syntax migration, so those version
+checks alone cannot detect an SDK with the older parser. The implementation
+now uses parenthesized `return(expression)`. Generated Cwhip examples use the
+current callable and bracketed dictionary syntax as well.
+
 Updating the Cwhip source alone does not update an installed SDK: rebuild and
 reinstall an updated Cwhip SDK at the prefix named
 in the configuration error, or point `CWHIP_SDK` at an updated installation,
@@ -96,10 +102,32 @@ The executable is written under `bin/`. CTest launches the actual Cwhip
 executable through `tests/test_cli.py` and installs/relocates it in a temporary
 prefix through `tests/test_install.py`. It also verifies the 16 preserved
 upstream examples using `examples/run_examples.py`; see
-[the examples guide](../examples/README.md). The suite does not fetch
+[the examples guide](EXAMPLES.md). The suite does not fetch
 dependencies or access the network.
 Numeric migration regressions cover indices and source positions beyond int8,
 hex escape arithmetic, and decimal comparisons outside the int64/uint64 ranges.
+The `cmacros-cwhip-output` regression also expands, compiles, and runs the
+current-syntax example with the same selected SDK in a fresh temporary project.
+
+To keep SDK selection, package locks, and build artifacts private (for example
+when validating a newly installed SDK), use a fresh build directory:
+
+```sh
+work=$(mktemp -d /tmp/cmacros-validation.XXXXXX)
+mkdir -p "$work/home" "$work/config"
+export HOME="$work/home" XDG_CONFIG_HOME="$work/config"
+export CWHIP_SDK=/absolute/path/to/current-cwhip-sdk
+cmake -S . -B "$work/build" -DCMAKE_PREFIX_PATH="$CWHIP_SDK" \
+    -DCWHIP_BIN_DIR="$work/build/bin" -DCWHIP_LIB_DIR="$work/build/lib" \
+    -DCMAKE_INSTALL_PREFIX="$work/install"
+cmake --build "$work/build" --parallel
+ctest --test-dir "$work/build" --output-on-failure
+cmake --install "$work/build"
+"$work/install/bin/cmacros" --version
+```
+
+Do not reuse stale package locks from another SDK build; a fresh build
+regenerates them and avoids `CWHIP9001` SDK fingerprint mismatches.
 
 Run the isolated SDK discovery regressions without an installed SDK using
 `python3 tests/test_sdk_discovery.py`. These cover the helper, CMake selection
