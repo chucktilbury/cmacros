@@ -93,7 +93,7 @@ class Processor {
         if (index < 0 or index >= text.length) {
             return(-1)
         }
-        return(int64(text.byteAt(index)))
+        return(int64(text[index]))
     }
 
     int64 utf8Width(int64 firstByte) {
@@ -175,7 +175,7 @@ class Processor {
         while (end < last and namePart(byte(text, end))) {
             end = end + 1
         }
-        return(text.slice(first, end))
+        return(byteSpan(text, first, end))
     }
 
     int64 nameEnd(String text, int64 first) {
@@ -390,7 +390,7 @@ class Processor {
                     } else {
                         if (current == 41) {
                             if (parens == 0 and brackets == 0 and braces == 0) {
-                                String value = text.slice(valueStart, index).trim()
+                                String value = byteSpan(text, valueStart, index).trim()
                                 if (value.length > 0 or result.length > 0) {
                                     if (not validArgumentLiteral(value)) {
                                         return(Arguments([], open, false))
@@ -417,8 +417,7 @@ class Processor {
                                         } else {
                                             if (current == 44 and parens == 0 and
                                                 brackets == 0 and braces == 0) {
-                                                String value = text.slice(
-                                                    valueStart, index).trim()
+                                                String value = byteSpan(text, valueStart, index).trim()
                                                 if (not validArgumentLiteral(value)) {
                                                     return(Arguments([], open, false))
                                                 }
@@ -531,7 +530,7 @@ class Processor {
                                                     result.append(format("{:c}", high * 16 + low))
                                                     index = index + 2
                                                 } else {
-                                                    result.append(text.slice(index, index + 1))
+                                                    result.append(byteSpan(text, index, index + 1))
                                                 }
                                             }
                                         }
@@ -544,7 +543,7 @@ class Processor {
                 index = index + 1
             } else {
                 int64 width = utf8Width(current)
-                result.append(text.slice(index, index + width))
+                result.append(byteSpan(text, index, index + width))
                 index = index + width
             }
         }
@@ -582,7 +581,7 @@ class Processor {
 
     String operatorAt(String text, int64 index) {
         if (index + 1 < text.length) {
-            String pair = text.slice(index, index + 2)
+            String pair = byteSpan(text, index, index + 2)
             if (pair.equals("||") or pair.equals("&&") or pair.equals("==") or
                 pair.equals("!=") or pair.equals("<=") or pair.equals(">=")) {
                 return(pair)
@@ -590,7 +589,7 @@ class Processor {
         }
         int64 remaining = text.length - index
         if (remaining >= 3) {
-            String word = text.slice(index, index + 3).toUpper()
+            String word = byteSpan(text, index, index + 3).toUpper()
             if ((word.equals("AND") or word.equals("NEQ") or
                  word.equals("LTE") or word.equals("GTE")) and
                 wordBoundary(text, index - 1) and wordBoundary(text, index + 3)) {
@@ -598,16 +597,16 @@ class Processor {
             }
         }
         if (remaining >= 2) {
-            String word = text.slice(index, index + 2).toUpper()
+            String word = byteSpan(text, index, index + 2).toUpper()
             if ((word.equals("OR") or word.equals("EQ") or
                  word.equals("LT") or word.equals("GT")) and
                 wordBoundary(text, index - 1) and wordBoundary(text, index + 2)) {
                 return(word)
             }
         }
-        if (text.slice(index, index + 1).equals("<") or
-            text.slice(index, index + 1).equals(">")) {
-            return(text.slice(index, index + 1))
+        if (byteSpan(text, index, index + 1).equals("<") or
+            byteSpan(text, index, index + 1).equals(">")) {
+            return(byteSpan(text, index, index + 1))
         }
         return("")
     }
@@ -852,27 +851,24 @@ class Processor {
             return(false)
         }
         while (wrapsWholeExpression(value)) {
-            value = value.slice(1, value.length - 1).trim()
+            value = byteSpan(value, 1, value.length - 1).trim()
         }
         Operator operator = findOperator(value, 1)
         if (operator.index >= 0) {
-            bool left = evalCondition(value.slice(0, operator.index), recursion + 1)
-            bool right = evalCondition(value.slice(
-                operator.index + operator.name.length, value.length), recursion + 1)
+            bool left = evalCondition(byteSpan(value, 0, operator.index), recursion + 1)
+            bool right = evalCondition(byteSpan(value, operator.index + operator.name.length, value.length), recursion + 1)
             return(left or right)
         }
         operator = findOperator(value, 2)
         if (operator.index >= 0) {
-            bool left = evalCondition(value.slice(0, operator.index), recursion + 1)
-            bool right = evalCondition(value.slice(
-                operator.index + operator.name.length, value.length), recursion + 1)
+            bool left = evalCondition(byteSpan(value, 0, operator.index), recursion + 1)
+            bool right = evalCondition(byteSpan(value, operator.index + operator.name.length, value.length), recursion + 1)
             return(left and right)
         }
         operator = findOperator(value, 3)
         if (operator.index >= 0) {
-            String left = value.slice(0, operator.index).trim()
-            String right = value.slice(operator.index + operator.name.length,
-                                       value.length).trim()
+            String left = byteSpan(value, 0, operator.index).trim()
+            String right = byteSpan(value, operator.index + operator.name.length, value.length).trim()
             if (left.length == 0 or right.length == 0) {
                 conditionError("comparison operator requires two operands")
                 return(false)
@@ -881,9 +877,8 @@ class Processor {
         }
         operator = findOperator(value, 4)
         if (operator.index >= 0) {
-            String left = value.slice(0, operator.index).trim()
-            String right = value.slice(operator.index + operator.name.length,
-                                       value.length).trim()
+            String left = byteSpan(value, 0, operator.index).trim()
+            String right = byteSpan(value, operator.index + operator.name.length, value.length).trim()
             if (left.length == 0 or right.length == 0) {
                 conditionError("comparison operator requires two operands")
                 return(false)
@@ -895,10 +890,10 @@ class Processor {
                 conditionError("unary ! requires an operand")
                 return(false)
             }
-            return(not evalCondition(value.slice(1, value.length), recursion + 1))
+            return(not evalCondition(byteSpan(value, 1, value.length), recursion + 1))
         }
         if (value.toUpper().startsWith("NOT ")) {
-            return(not evalCondition(value.slice(4, value.length), recursion + 1))
+            return(not evalCondition(byteSpan(value, 4, value.length), recursion + 1))
         }
         if (value.toUpper().equals("TRUE")) {
             return(true)
@@ -922,7 +917,7 @@ class Processor {
                 conditionError("expected a macro name after @")
                 return("")
             }
-            String name = value.slice(1, end)
+            String name = byteSpan(value, 1, end)
             Macro macro = findMacro(name)
             int64 cursor = skipHorizontal(value, end)
             list arguments = []
@@ -1233,7 +1228,7 @@ class Processor {
                     break
                 }
                 output.append(" ")
-                String comment = source.slice(index + 2, end)
+                String comment = byteSpan(source, index + 2, end)
                 int64 ci = 0
                 while (ci < comment.length) {
                     if (byte(comment, ci) == 10) {
@@ -1247,7 +1242,7 @@ class Processor {
             if (not handled and literalQuote == 0 and
                 current == 46 and nameStart(next)) {
                 int64 wordEnd = nameEnd(source, index + 1)
-                String directive = source.slice(index + 1, wordEnd).toLower()
+                String directive = byteSpan(source, index + 1, wordEnd).toLower()
                 int64 argumentStart = skipSpace(source, wordEnd)
                 if (directive.equals("if")) {
                     if (byte(source, argumentStart) != 40) {
@@ -1277,14 +1272,14 @@ class Processor {
                     conditionLine = line
                     conditionColumn = column
                     bool selected = evalCondition(
-                        source.slice(argumentStart + 1, expressionEnd), 0)
+                        byteSpan(source, argumentStart + 1, expressionEnd), 0)
                     String selectedBody = ""
                     int64 selectedLine = lineAfter(source, startIndex,
                                                  bodyStart + 1, line)
                     int64 selectedColumn = columnAfter(source, startIndex,
                                                      bodyStart + 1, column)
                     if (selected) {
-                        selectedBody = source.slice(bodyStart + 1, bodyEnd)
+                        selectedBody = byteSpan(source, bodyStart + 1, bodyEnd)
                     }
                     index = bodyEnd + 1
                     bool lookingAtElse = true
@@ -1294,7 +1289,7 @@ class Processor {
                             lookingAtElse = false
                         } else {
                             int64 elseNameEnd = nameEnd(source, elseStart + 1)
-                            String elseName = source.slice(elseStart + 1, elseNameEnd).toLower()
+                            String elseName = byteSpan(source, elseStart + 1, elseNameEnd).toLower()
                             if (not elseName.equals("else")) {
                                 lookingAtElse = false
                             } else {
@@ -1316,7 +1311,7 @@ class Processor {
                                     conditionColumn = columnAfter(
                                         source, startIndex, elseStart, column)
                                     elseMatches = evalCondition(
-                                        source.slice(elseArgs + 1, elseExpressionEnd), 0)
+                                        byteSpan(source, elseArgs + 1, elseExpressionEnd), 0)
                                     elseArgs = skipSpace(source, elseExpressionEnd + 1)
                                 }
                                 if (byte(source, elseArgs) != 123) {
@@ -1336,7 +1331,7 @@ class Processor {
                                 }
                                 if (not selected and (not elseHasExpression or elseMatches)) {
                                     selected = true
-                                    selectedBody = source.slice(elseArgs + 1, elseBodyEnd)
+                                    selectedBody = byteSpan(source, elseArgs + 1, elseBodyEnd)
                                     selectedLine = lineAfter(
                                         source, startIndex, elseArgs + 1, line)
                                     selectedColumn = columnAfter(
@@ -1364,7 +1359,7 @@ class Processor {
                                "expected a macro name after .define")
                         break
                     }
-                    String macroName = source.slice(nameStartIndex, nameStop)
+                    String macroName = byteSpan(source, nameStartIndex, nameStop)
                     int64 cursor = skipHorizontal(source, nameStop)
                     list parameters = []
                     bool functionLike = false
@@ -1380,7 +1375,7 @@ class Processor {
                             if (byte(source, close) == 41 and parenDepth > 0) {
                                 parenDepth = parenDepth - 1
                                 if (parenDepth == 0) {
-                                    String param = source.slice(paramStart, close).trim()
+                                    String param = byteSpan(source, paramStart, close).trim()
                                     if (param.length > 0 or parameters.length > 0) {
                                         parameters.append(param)
                                     }
@@ -1388,7 +1383,7 @@ class Processor {
                                 }
                             }
                             if (byte(source, close) == 44 and parenDepth == 1) {
-                                parameters.append(source.slice(paramStart, close).trim())
+                                parameters.append(byteSpan(source, paramStart, close).trim())
                                 paramStart = close + 1
                             }
                             close = close + 1
@@ -1412,7 +1407,7 @@ class Processor {
                                    "unterminated .define body")
                             break
                         }
-                        body = source.slice(cursor + 1, closeBody)
+                        body = byteSpan(source, cursor + 1, closeBody)
                         bodyLine = lineAfter(source, startIndex, cursor + 1, line)
                         index = closeBody + 1
                     } else {
@@ -1481,7 +1476,7 @@ class Processor {
             }
             if (not handled and current == 64 and nameStart(next)) {
                 int64 endName = nameEnd(source, index + 1)
-                String name = source.slice(index + 1, endName)
+                String name = byteSpan(source, index + 1, endName)
                 int64 localIndex = findParameter(parameterNames, name)
                 if (localIndex >= 0) {
                     String value = parameterValues[localIndex] as String
@@ -1531,7 +1526,7 @@ class Processor {
                         afterReference = parsedEmpty.end
                     }
                     if (macro == null) {
-                        output.append(source.slice(index, endName))
+                        output.append(byteSpan(source, index, endName))
                         index = endName
                     } else {
                         if (inList(active, name)) {
@@ -1571,7 +1566,7 @@ class Processor {
             }
             if (not handled) {
                 int64 width = utf8Width(current)
-                output.append(source.slice(index, index + width))
+                output.append(byteSpan(source, index, index + width))
                 if (literalQuote != 0) {
                     if (literalEscaped) {
                         literalEscaped = false
@@ -1691,6 +1686,36 @@ class Processor {
         io.writeLine("  -h, --help   Show this help")
         io.writeLine("  -V, --version Show the version")
     }
+
+    int64 byteSpanBound(int64 value, int64 length) {
+        int64 index = value
+        if (index < 0) { index = index + length }
+        if (index < 0) { return(0) }
+        if (index > length) { return(length) }
+        return(index)
+    }
+    String byteSpan(String text, int64 first, int64 last) {
+        int64 lower = byteSpanBound(first, text.length)
+        int64 end = byteSpanBound(last, text.length)
+        if (end <= lower) { return("") }
+        return(text[lower..(end - 1)])
+    }
+}
+
+class ByteSpan {
+    int64 byteSpanBound(int64 value, int64 length) {
+        int64 index = value
+        if (index < 0) { index = index + length }
+        if (index < 0) { return(0) }
+        if (index > length) { return(length) }
+        return(index)
+    }
+    String byteSpan(String text, int64 first, int64 last) {
+        int64 lower = byteSpanBound(first, text.length)
+        int64 end = byteSpanBound(last, text.length)
+        if (end <= lower) { return("") }
+        return(text[lower..(end - 1)])
+    }
 }
 
 start {
@@ -1728,7 +1753,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("--ofile=")) {
-            outputPath = argument.slice(8, argument.length)
+            outputPath = ByteSpan().byteSpan(argument, 8, argument.length)
             if (outputPath.length == 0) {
                 problem = "option --ofile requires a file name"
             }
@@ -1736,7 +1761,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("-o=")) {
-            outputPath = argument.slice(3, argument.length)
+            outputPath = ByteSpan().byteSpan(argument, 3, argument.length)
             if (outputPath.length == 0) {
                 problem = "option -o requires a file name"
             }
@@ -1744,7 +1769,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("-o") and argument.length > 2) {
-            outputPath = argument.slice(2, argument.length)
+            outputPath = ByteSpan().byteSpan(argument, 2, argument.length)
             index = index + 1
             consumed = true
         }
@@ -1763,7 +1788,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("--include=")) {
-            list segments = argument.slice(10, argument.length).split(":")
+            list segments = ByteSpan().byteSpan(argument, 10, argument.length).split(":")
             int64 segment = 0
             while (segment < segments.length) {
                 paths.append(segments[segment] as String)
@@ -1773,7 +1798,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("-I=")) {
-            list segments = argument.slice(3, argument.length).split(":")
+            list segments = ByteSpan().byteSpan(argument, 3, argument.length).split(":")
             int64 segment = 0
             while (segment < segments.length) {
                 paths.append(segments[segment] as String)
@@ -1783,7 +1808,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("-I") and argument.length > 2) {
-            list segments = argument.slice(2, argument.length).split(":")
+            list segments = ByteSpan().byteSpan(argument, 2, argument.length).split(":")
             int64 segment = 0
             while (segment < segments.length) {
                 paths.append(segments[segment] as String)
@@ -1802,7 +1827,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("--define=")) {
-            String definition = argument.slice(9, argument.length)
+            String definition = ByteSpan().byteSpan(argument, 9, argument.length)
             if (definition.length == 0) {
                 problem = "option --define requires a macro name"
             } else {
@@ -1812,7 +1837,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("-D=")) {
-            String definition = argument.slice(3, argument.length)
+            String definition = ByteSpan().byteSpan(argument, 3, argument.length)
             if (definition.length == 0) {
                 problem = "option -D requires a macro name"
             } else {
@@ -1822,7 +1847,7 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("-D") and argument.length > 2) {
-            definitions.append(argument.slice(2, argument.length))
+            definitions.append(ByteSpan().byteSpan(argument, 2, argument.length))
             index = index + 1
             consumed = true
         }
@@ -1833,7 +1858,7 @@ start {
                 validVerbosity = verbosityText.length > 0
                 int64 digit = 0
                 while (digit < verbosityText.length) {
-                    int64 codepoint = int64(verbosityText.byteAt(digit))
+                    int64 codepoint = int64(verbosityText[digit])
                     if (codepoint < 48 or codepoint > 57) {
                         validVerbosity = false
                     }
@@ -1848,11 +1873,11 @@ start {
             consumed = true
         }
         if (not consumed and argument.startsWith("--verbosity=")) {
-            String verbosityText = argument.slice(12, argument.length)
+            String verbosityText = ByteSpan().byteSpan(argument, 12, argument.length)
             bool validVerbosity = verbosityText.length > 0
             int64 digit = 0
             while (digit < verbosityText.length) {
-                int64 codepoint = int64(verbosityText.byteAt(digit))
+                int64 codepoint = int64(verbosityText[digit])
                 if (codepoint < 48 or codepoint > 57) {
                     validVerbosity = false
                 }
@@ -1922,8 +1947,8 @@ start {
         String name = definition
         String body = ""
         if (equals >= 0) {
-            name = definition.slice(0, equals)
-            body = definition.slice(equals + 1, definition.length)
+            name = ByteSpan().byteSpan(definition, 0, equals)
+            body = ByteSpan().byteSpan(definition, equals + 1, definition.length)
         }
         list noParameters = []
         processor.addDefinition(name, body, "<command line>", 1, 1,

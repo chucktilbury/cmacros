@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Read source bytes with `text[index]` and copy half-open spans through an
+  inclusive range. Empty spans stay empty. `String.byteAt` and `String.slice`
+  are no longer SDK methods. The macro input language is unchanged.
 - Migrate return expressions to current Cwhip syntax and add an exact-output,
   compile-and-run regression for macros generating current Cwhip source.
 - Keep READMEs as directory guides and consolidate usage and example details

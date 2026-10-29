@@ -12,7 +12,9 @@ Use a current SDK built from Cwhip `master`: SDK version 0.0.2 and ABI
 `numeric-v2` are unchanged by the language syntax migration, so those version
 checks alone cannot detect an SDK with the older parser. The implementation
 now uses parenthesized `return(expression)`. Generated Cwhip examples use the
-current callable and bracketed dictionary syntax as well.
+current callable and bracketed dictionary syntax as well. String bytes are
+read with `text[index]`. The SDK does not provide `String.byteAt` or
+`String.slice`.
 
 Updating the Cwhip source alone does not update an installed SDK: rebuild and
 reinstall an updated Cwhip SDK at the prefix named
