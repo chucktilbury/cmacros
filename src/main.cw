@@ -1,4 +1,5 @@
 import system as Sys
+import cli as Cli
 
 class Macro {
     String name
@@ -110,8 +111,7 @@ class Processor {
     }
 
     bool nameStart(int64 value) {
-        return((value >= 65 and value <= 90) or
-               (value >= 97 and value <= 122) or value == 95)
+        return((value >= 65 and value <= 90) or (value >= 97 and value <= 122) or value == 95)
     }
 
     bool namePart(int64 value) {
@@ -119,8 +119,7 @@ class Processor {
     }
 
     bool space(int64 value) {
-        return(value == 32 or value == 9 or value == 10 or
-               value == 13 or value == 12 or value == 11)
+        return(value == 32 or value == 9 or value == 10 or value == 13 or value == 12 or value == 11)
     }
 
     int64 skipSpace(String text, int64 index) {
@@ -131,9 +130,7 @@ class Processor {
     }
 
     int64 skipHorizontal(String text, int64 index) {
-        while (index < text.length and
-               (byte(text, index) == 32 or byte(text, index) == 9 or
-                byte(text, index) == 13)) {
+        while (index < text.length and (byte(text, index) == 32 or byte(text, index) == 9 or byte(text, index) == 13)) {
             index = index + 1
         }
         return(index)
@@ -415,8 +412,7 @@ class Processor {
                                         if (current == 125) {
                                             braces = braces - 1
                                         } else {
-                                            if (current == 44 and parens == 0 and
-                                                brackets == 0 and braces == 0) {
+                                            if (current == 44 and parens == 0 and brackets == 0 and braces == 0) {
                                                 String value = byteSpan(text, valueStart, index).trim()
                                                 if (not validArgumentLiteral(value)) {
                                                     return(Arguments([], open, false))
@@ -452,9 +448,7 @@ class Processor {
     }
 
     String unquote(String value) {
-        if (value.length >= 2 and
-            ((byte(value, 0) == 34 and byte(value, value.length - 1) == 34) or
-             (byte(value, 0) == 39 and byte(value, value.length - 1) == 39))) {
+        if (value.length >= 2 and ((byte(value, 0) == 34 and byte(value, value.length - 1) == 34) or (byte(value, 0) == 39 and byte(value, value.length - 1) == 39))) {
             LiteralValue decoded = parseLiteral(value, 0)
             if (decoded.valid) {
                 return(decoded.value)
@@ -566,14 +560,10 @@ class Processor {
         if (upper.equals("AND") or operator.equals("&&")) {
             return(2)
         }
-        if (upper.equals("==") or operator.equals("!=") or
-            upper.equals("EQ") or upper.equals("NEQ")) {
+        if (upper.equals("==") or operator.equals("!=") or upper.equals("EQ") or upper.equals("NEQ")) {
             return(3)
         }
-        if (operator.equals("<") or operator.equals(">") or
-            operator.equals("<=") or operator.equals(">=") or
-            upper.equals("LT") or upper.equals("GT") or
-            upper.equals("LTE") or upper.equals("GTE")) {
+        if (operator.equals("<") or operator.equals(">") or operator.equals("<=") or operator.equals(">=") or upper.equals("LT") or upper.equals("GT") or upper.equals("LTE") or upper.equals("GTE")) {
             return(4)
         }
         return(0)
@@ -582,30 +572,24 @@ class Processor {
     String operatorAt(String text, int64 index) {
         if (index + 1 < text.length) {
             String pair = byteSpan(text, index, index + 2)
-            if (pair.equals("||") or pair.equals("&&") or pair.equals("==") or
-                pair.equals("!=") or pair.equals("<=") or pair.equals(">=")) {
+            if (pair.equals("||") or pair.equals("&&") or pair.equals("==") or pair.equals("!=") or pair.equals("<=") or pair.equals(">=")) {
                 return(pair)
             }
         }
         int64 remaining = text.length - index
         if (remaining >= 3) {
             String word = byteSpan(text, index, index + 3).toUpper()
-            if ((word.equals("AND") or word.equals("NEQ") or
-                 word.equals("LTE") or word.equals("GTE")) and
-                wordBoundary(text, index - 1) and wordBoundary(text, index + 3)) {
+            if ((word.equals("AND") or word.equals("NEQ") or word.equals("LTE") or word.equals("GTE")) and wordBoundary(text, index - 1) and wordBoundary(text, index + 3)) {
                 return(word)
             }
         }
         if (remaining >= 2) {
             String word = byteSpan(text, index, index + 2).toUpper()
-            if ((word.equals("OR") or word.equals("EQ") or
-                 word.equals("LT") or word.equals("GT")) and
-                wordBoundary(text, index - 1) and wordBoundary(text, index + 2)) {
+            if ((word.equals("OR") or word.equals("EQ") or word.equals("LT") or word.equals("GT")) and wordBoundary(text, index - 1) and wordBoundary(text, index + 2)) {
                 return(word)
             }
         }
-        if (byteSpan(text, index, index + 1).equals("<") or
-            byteSpan(text, index, index + 1).equals(">")) {
+        if (byteSpan(text, index, index + 1).equals("<") or byteSpan(text, index, index + 1).equals(">")) {
             return(byteSpan(text, index, index + 1))
         }
         return("")
@@ -657,8 +641,7 @@ class Processor {
     }
 
     bool wrapsWholeExpression(String expression) {
-        if (expression.length < 2 or byte(expression, 0) != 40 or
-            byte(expression, expression.length - 1) != 41) {
+        if (expression.length < 2 or byte(expression, 0) != 40 or byte(expression, expression.length - 1) != 41) {
             return(false)
         }
         int64 depth = 0
@@ -901,8 +884,7 @@ class Processor {
         if (value.toUpper().equals("FALSE")) {
             return(false)
         }
-        if (not decimalNumber(value) and not value.startsWith("@") and
-            (not nameStart(byte(value, 0)) or nameEnd(value, 0) != value.length)) {
+        if (not decimalNumber(value) and not value.startsWith("@") and (not nameStart(byte(value, 0)) or nameEnd(value, 0) != value.length)) {
             conditionError("invalid token in conditional expression")
             return(false)
         }
@@ -923,8 +905,7 @@ class Processor {
             list arguments = []
             int64 afterReference = end
             if (cursor < value.length) {
-                if (byte(value, cursor) != 40 or macro == null or
-                    not macro.functionLike) {
+                if (byte(value, cursor) != 40 or macro == null or not macro.functionLike) {
                     conditionError("invalid text after macro reference in conditional expression")
                     return("")
                 }
@@ -936,8 +917,7 @@ class Processor {
                 arguments = parsed.values
                 afterReference = parsed.end
             } else {
-                if (macro != null and macro.functionLike and
-                    macro.parameters.length > 0) {
+                if (macro != null and macro.functionLike and macro.parameters.length > 0) {
                     conditionError(format("macro '{}' requires an argument list", name))
                     return("")
                 }
@@ -1056,9 +1036,7 @@ class Processor {
                     } else {
                         if (current == 47 and next == 42) {
                             index = index + 2
-                            while (index + 1 < text.length and
-                                   not (byte(text, index) == 42 and
-                                        byte(text, index + 1) == 47)) {
+                            while (index + 1 < text.length and not (byte(text, index) == 42 and byte(text, index + 1) == 47)) {
                                 index = index + 1
                             }
                             index = index + 1
@@ -1163,8 +1141,7 @@ class Processor {
                 }
                 index = index + 1
             }
-            if (not existing.body.equals(body) or existing.functionLike != functionLike or
-                not sameParameters) {
+            if (not existing.body.equals(body) or existing.functionLike != functionLike or not sameParameters) {
                 report(1001, file, line, 1,
                        format("macro '{}' is already defined", name))
             }
@@ -1206,8 +1183,7 @@ class Processor {
                 literalEscaped = false
                 handled = true
             }
-            if (not handled and literalQuote == 0 and
-                current == 47 and next == 47) {
+            if (not handled and literalQuote == 0 and current == 47 and next == 47) {
                 int64 end = index
                 while (end < source.length and byte(source, end) != 10) {
                     end = end + 1
@@ -1215,11 +1191,9 @@ class Processor {
                 index = end
                 handled = true
             }
-            if (not handled and literalQuote == 0 and
-                current == 47 and next == 42) {
+            if (not handled and literalQuote == 0 and current == 47 and next == 42) {
                 int64 end = index + 2
-                while (end + 1 < source.length and
-                       not (byte(source, end) == 42 and byte(source, end + 1) == 47)) {
+                while (end + 1 < source.length and not (byte(source, end) == 42 and byte(source, end + 1) == 47)) {
                     end = end + 1
                 }
                 if (end + 1 >= source.length) {
@@ -1239,8 +1213,7 @@ class Processor {
                 index = end + 2
                 handled = true
             }
-            if (not handled and literalQuote == 0 and
-                current == 46 and nameStart(next)) {
+            if (not handled and literalQuote == 0 and current == 46 and nameStart(next)) {
                 int64 wordEnd = nameEnd(source, index + 1)
                 String directive = byteSpan(source, index + 1, wordEnd).toLower()
                 int64 argumentStart = skipSpace(source, wordEnd)
@@ -1515,8 +1488,7 @@ class Processor {
                             break
                         }
                     }
-                    if (macro != null and macro.functionLike and
-                        macro.parameters.length == 0 and byte(source, cursor) == 40) {
+                    if (macro != null and macro.functionLike and macro.parameters.length == 0 and byte(source, cursor) == 40) {
                         Arguments parsedEmpty = parseArguments(source, cursor)
                         if (not parsedEmpty.valid or parsedEmpty.values.length > 0) {
                             report(1005, file, line, column,
@@ -1623,8 +1595,7 @@ class Processor {
             list active = []
             result = processFile(input, imports, active, 0)
             bool definitionsStable = definitionCount() == definitionsBeforePass
-            if (failed or (pass > 0 and definitionsStable and
-                           result.equals(previous))) {
+            if (failed or (pass > 0 and definitionsStable and result.equals(previous))) {
                 return(result)
             }
             previous = result
@@ -1721,202 +1692,114 @@ class ByteSpan {
 start {
     Sys.Process process = Sys.Process()
     Sys.StandardIO io = Sys.System().io()
-    int64 argc = process.argc()
-    String input = ""
-    String outputPath = ""
-    list paths = []
-    list definitions = []
-    int64 index = 1
-    bool showHelp = false
-    bool showVersion = false
+    Cli.CommandLine commandLine = Cli.CommandLine("cmacros", "Cwhip macro processor", "1.0")
+    Cli.Option help = Cli.Option()
+    help.shortName = "h"
+    help.longName = "help"
+    help.name = "help"
+    help.action = Cli.Action().HELP
+    commandLine.addOption(help)
+    Cli.Option version = Cli.Option()
+    version.shortName = "V"
+    version.longName = "version"
+    version.name = "version"
+    version.action = Cli.Action().VERSION
+    commandLine.addOption(version)
+    Cli.Option output = Cli.Option()
+    output.shortName = "o"
+    output.longName = "ofile"
+    output.name = "output"
+    output.description = "write output to FILE"
+    output.valueType = Cli.ValueType().STRING
+    commandLine.addOption(output)
+    Cli.Option includePath = Cli.Option()
+    includePath.shortName = "I"
+    includePath.longName = "include"
+    includePath.name = "include"
+    includePath.description = "import search directory"
+    includePath.valueType = Cli.ValueType().STRING
+    includePath.isList = true
+    commandLine.addOption(includePath)
+    Cli.Option define = Cli.Option()
+    define.shortName = "D"
+    define.longName = "define"
+    define.name = "define"
+    define.description = "define a command-line macro"
+    define.valueType = Cli.ValueType().STRING
+    define.isList = true
+    // Keep each -D argument intact so NAME=value stays one definition.
+    define.listSeparator = "\n"
+    commandLine.addOption(define)
+    Cli.Option verbosity = Cli.Option()
+    verbosity.shortName = "v"
+    verbosity.longName = "verbosity"
+    verbosity.name = "verbosity"
+    verbosity.description = "verbosity (accepted for compatibility)"
+    verbosity.valueType = Cli.ValueType().NUMBER
+    commandLine.addOption(verbosity)
+    Cli.Positional inputPos = Cli.Positional()
+    inputPos.name = "input"
+    inputPos.description = "source file"
+    inputPos.required = true
+    commandLine.addPositional(inputPos)
+
     String problem = ""
-    while (index < argc and problem.length == 0) {
-        String argument = process.arg(index)
-        bool consumed = false
-        if (argument.equals("-h") or argument.equals("--help")) {
-            showHelp = true
-            index = index + 1
-            consumed = true
+    try {
+        commandLine.parseArgv()
+    } except() as error {
+        problem = format("{}", error)
+        if (problem.startsWith("unknown option: ")) {
+            problem = format("unknown option '{}'", problem[16..problem.length - 1])
         }
-        if (not consumed and (argument.equals("-V") or argument.equals("--version"))) {
-            showVersion = true
-            index = index + 1
-            consumed = true
+        if (problem.startsWith("option --ofile requires")) {
+            problem = "option --ofile requires a file name"
         }
-        if (not consumed and (argument.equals("-o") or argument.equals("--ofile"))) {
-            if (index + 1 >= argc) {
-                problem = "option -o requires a file name"
-            } else {
-                outputPath = process.arg(index + 1)
-                index = index + 2
-            }
-            consumed = true
+        if (problem.startsWith("option -o requires")) {
+            problem = "option -o requires a file name"
         }
-        if (not consumed and argument.startsWith("--ofile=")) {
-            outputPath = ByteSpan().byteSpan(argument, 8, argument.length)
-            if (outputPath.length == 0) {
-                problem = "option --ofile requires a file name"
-            }
-            index = index + 1
-            consumed = true
+        if (problem.startsWith("option --include requires") or problem.startsWith("option -I requires")) {
+            problem = "option -I requires a directory"
         }
-        if (not consumed and argument.startsWith("-o=")) {
-            outputPath = ByteSpan().byteSpan(argument, 3, argument.length)
-            if (outputPath.length == 0) {
-                problem = "option -o requires a file name"
-            }
-            index = index + 1
-            consumed = true
+        if (problem.startsWith("option --define requires") or problem.startsWith("option -D requires")) {
+            problem = "option -D requires a definition"
         }
-        if (not consumed and argument.startsWith("-o") and argument.length > 2) {
-            outputPath = ByteSpan().byteSpan(argument, 2, argument.length)
-            index = index + 1
-            consumed = true
+        if (problem.startsWith("option --verbosity requires") or problem.startsWith("option -v requires")) {
+            problem = "option -v requires a non-negative number"
         }
-        if (not consumed and (argument.equals("-I") or argument.equals("--include"))) {
-            if (index + 1 >= argc) {
-                problem = "option -I requires a directory"
-            } else {
-                list segments = process.arg(index + 1).split(":")
-                int64 segment = 0
-                while (segment < segments.length) {
-                    paths.append(segments[segment] as String)
-                    segment = segment + 1
-                }
-                index = index + 2
-            }
-            consumed = true
-        }
-        if (not consumed and argument.startsWith("--include=")) {
-            list segments = ByteSpan().byteSpan(argument, 10, argument.length).split(":")
-            int64 segment = 0
-            while (segment < segments.length) {
-                paths.append(segments[segment] as String)
-                segment = segment + 1
-            }
-            index = index + 1
-            consumed = true
-        }
-        if (not consumed and argument.startsWith("-I=")) {
-            list segments = ByteSpan().byteSpan(argument, 3, argument.length).split(":")
-            int64 segment = 0
-            while (segment < segments.length) {
-                paths.append(segments[segment] as String)
-                segment = segment + 1
-            }
-            index = index + 1
-            consumed = true
-        }
-        if (not consumed and argument.startsWith("-I") and argument.length > 2) {
-            list segments = ByteSpan().byteSpan(argument, 2, argument.length).split(":")
-            int64 segment = 0
-            while (segment < segments.length) {
-                paths.append(segments[segment] as String)
-                segment = segment + 1
-            }
-            index = index + 1
-            consumed = true
-        }
-        if (not consumed and (argument.equals("-D") or argument.equals("--define"))) {
-            if (index + 1 >= argc) {
-                problem = "option -D requires a definition"
-            } else {
-                definitions.append(process.arg(index + 1))
-                index = index + 2
-            }
-            consumed = true
-        }
-        if (not consumed and argument.startsWith("--define=")) {
-            String definition = ByteSpan().byteSpan(argument, 9, argument.length)
-            if (definition.length == 0) {
-                problem = "option --define requires a macro name"
-            } else {
-                definitions.append(definition)
-            }
-            index = index + 1
-            consumed = true
-        }
-        if (not consumed and argument.startsWith("-D=")) {
-            String definition = ByteSpan().byteSpan(argument, 3, argument.length)
-            if (definition.length == 0) {
-                problem = "option -D requires a macro name"
-            } else {
-                definitions.append(definition)
-            }
-            index = index + 1
-            consumed = true
-        }
-        if (not consumed and argument.startsWith("-D") and argument.length > 2) {
-            definitions.append(ByteSpan().byteSpan(argument, 2, argument.length))
-            index = index + 1
-            consumed = true
-        }
-        if (not consumed and (argument.equals("-v") or argument.equals("--verbosity"))) {
-            bool validVerbosity = index + 1 < argc
-            if (validVerbosity) {
-                String verbosityText = process.arg(index + 1)
-                validVerbosity = verbosityText.length > 0
-                int64 digit = 0
-                while (digit < verbosityText.length) {
-                    int64 codepoint = int64(verbosityText[digit])
-                    if (codepoint < 48 or codepoint > 57) {
-                        validVerbosity = false
-                    }
-                    digit = digit + 1
-                }
-            }
-            if (not validVerbosity) {
-                problem = "option -v requires a non-negative number"
-            } else {
-                index = index + 2
-            }
-            consumed = true
-        }
-        if (not consumed and argument.startsWith("--verbosity=")) {
-            String verbosityText = ByteSpan().byteSpan(argument, 12, argument.length)
-            bool validVerbosity = verbosityText.length > 0
-            int64 digit = 0
-            while (digit < verbosityText.length) {
-                int64 codepoint = int64(verbosityText[digit])
-                if (codepoint < 48 or codepoint > 57) {
-                    validVerbosity = false
-                }
-                digit = digit + 1
-            }
-            if (not validVerbosity) {
-                problem = "option --verbosity requires a non-negative number"
-            }
-            index = index + 1
-            consumed = true
-        }
-        if (not consumed) {
-            if (argument.startsWith("-")) {
-                problem = format("unknown option '{}'", argument)
-            } else {
-                if (input.length > 0) {
-                    problem = "only one input file may be specified"
-                } else {
-                    input = argument
-                }
-                index = index + 1
-            }
-        }
-    }
-    if (showHelp) {
-        Processor([]).printHelp()
-    }
-    if (showVersion) {
-        io.writeLine("cmacros: v1.0")
-    }
-    if (not showHelp and not showVersion) {
-    if (problem.length > 0 or input.length == 0) {
-        if (problem.length == 0) {
+        if (problem.startsWith("required argument not found")) {
             problem = "an input file is required"
+        }
+        if (problem.startsWith("unexpected positional")) {
+            problem = "only one input file may be specified"
+        }
+    }
+    if (commandLine.currentAction() == Cli.Action().HELP) {
+        Processor([]).printHelp()
+        process.exit(0)
+    }
+    if (commandLine.currentAction() == Cli.Action().VERSION) {
+        io.writeLine("cmacros: v1.0")
+        process.exit(0)
+    }
+    if (problem.length > 0 or commandLine.allPositionalValues().length != 1) {
+        if (problem.length == 0) {
+            if (commandLine.allPositionalValues().length == 0) {
+                problem = "an input file is required"
+            } else {
+                problem = "only one input file may be specified"
+            }
         }
         io.writeErrorLine(format("cmacros: error[CMACRO0001]: {}", problem))
         io.writeErrorLine("Try 'cmacros --help' for usage.")
         process.exit(2)
     }
+    String input = commandLine.allPositionalValues()[0] as String
+    String outputPath = ""
+    if (commandLine.wasProvided("output")) {
+        outputPath = commandLine.value("output")
+    }
+    list paths = commandLine.valuesFor("include")
+    list definitions = commandLine.valuesFor("define")
     String macroPath = process.getEnv("MACRO_PATH")
     if (macroPath.length > 0) {
         list environmentPaths = macroPath.split(":")
@@ -1927,16 +1810,14 @@ start {
         }
     }
     String absoluteInput = Sys.FileSystem().absolutePath(input)
-    if (absoluteInput.length == 0 and
-        Sys.FileSystem().isFile(format("{}.txt", input))) {
+    if (absoluteInput.length == 0 and Sys.FileSystem().isFile(format("{}.txt", input))) {
         input = format("{}.txt", input)
     }
     if (absoluteInput.length > 0) {
         input = absoluteInput
     }
     if (not Sys.FileSystem().isFile(input)) {
-        io.writeErrorLine(format("cmacros: error[CMACRO2000]: cannot open input '{}'",
-                                 input))
+        io.writeErrorLine(format("cmacros: error[CMACRO2000]: cannot open input '{}'", input))
         process.exit(1)
     }
     Processor processor = Processor(paths)
@@ -1951,8 +1832,7 @@ start {
             body = ByteSpan().byteSpan(definition, equals + 1, definition.length)
         }
         list noParameters = []
-        processor.addDefinition(name, body, "<command line>", 1, 1,
-                                noParameters, true)
+        processor.addDefinition(name, body, "<command line>", 1, 1, noParameters, true)
         definitionIndex = definitionIndex + 1
     }
     String result = processor.process(input)
@@ -1961,6 +1841,5 @@ start {
     }
     if (processor.failed) {
         process.exit(1)
-    }
     }
 }
