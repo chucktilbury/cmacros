@@ -35,9 +35,12 @@ the completed result is written to standard output. `-` as an output path means
 stdout and cannot name a real file. `-k` / `--keep-comments` leaves `//` and
 `/* */` comment text in the output; by default those forms are stripped outside
 quoted literals with no language-specific context rules. `--help` and
-`--version` print to standard output. The legacy `-v N` option is accepted and
-ignored. See [Language reference](LANGUAGE.md) for the language contract and
-[Diagnostics](DIAGNOSTICS.md) for errors and processing limits.
+`--version` print to standard output. Argv is parsed through the SDK `cli`
+package; `--help` still prints the hand-written usage text (not stdlib
+`helpText()`), and parse failures exit 2 as `cmacros: error[CMACRO0001]: …`
+with a `Try 'cmacros --help' for usage.` note. The legacy `-v N` option is
+accepted and ignored. See [Language reference](LANGUAGE.md) for the language
+contract and [Diagnostics](DIAGNOSTICS.md) for errors and processing limits.
 
 ## Original examples
 
