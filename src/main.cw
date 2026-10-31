@@ -71,6 +71,7 @@ class Processor {
     String conditionFile
     int64 conditionLine
     int64 conditionColumn
+    bool keepComments
     Sys.StandardIO io
 
     Processor(list paths) {
@@ -87,6 +88,7 @@ class Processor {
         conditionFile = ""
         conditionLine = 1
         conditionColumn = 1
+        keepComments = false
         io = Sys.System().io()
     }
 
@@ -247,6 +249,11 @@ class Processor {
         report(1009, conditionFile, conditionLine, conditionColumn, message)
     }
 
+    void cacheSource(String path, String content) {
+        cachedPaths.append(path)
+        cachedContents.append(content)
+    }
+
     String readFile(String path, int64 line) {
         int64 cacheIndex = 0
         while (cacheIndex < cachedPaths.length) {
@@ -255,6 +262,10 @@ class Processor {
                 return(cachedContents[cacheIndex] as String)
             }
             cacheIndex = cacheIndex + 1
+        }
+        if (path.equals("<stdin>")) {
+            report(2000, path, line, 1, "stdin source was not loaded")
+            return("")
         }
         int64 size = Sys.FileSystem().fileSize(path)
         if (size > 16777216) {
@@ -270,8 +281,7 @@ class Processor {
             report(2000, path, line, 1, format("cannot read input: {}", message))
         }
         if (not failed) {
-            cachedPaths.append(path)
-            cachedContents.append(content)
+            cacheSource(path, content)
         }
         return(content)
     }
@@ -328,11 +338,14 @@ class Processor {
             currentImports = parentImports
             return("")
         }
-        String canonical = Sys.FileSystem().absolutePath(file)
-        if (canonical.length == 0) {
-            report(2000, file, 1, 1, "cannot resolve source path")
-            currentImports = parentImports
-            return("")
+        String canonical = file
+        if (not file.equals("<stdin>")) {
+            canonical = Sys.FileSystem().absolutePath(file)
+            if (canonical.length == 0) {
+                report(2000, file, 1, 1, "cannot resolve source path")
+                currentImports = parentImports
+                return("")
+            }
         }
         if (inList(imports, canonical)) {
             report(2003, file, 1, 1, "import cycle detected")
@@ -1188,6 +1201,9 @@ class Processor {
                 while (end < source.length and byte(source, end) != 10) {
                     end = end + 1
                 }
+                if (keepComments) {
+                    output.append(byteSpan(source, index, end))
+                }
                 index = end
                 handled = true
             }
@@ -1201,14 +1217,18 @@ class Processor {
                            "unterminated block comment")
                     break
                 }
-                output.append(" ")
-                String comment = byteSpan(source, index + 2, end)
-                int64 ci = 0
-                while (ci < comment.length) {
-                    if (byte(comment, ci) == 10) {
-                        output.append("\n")
+                if (keepComments) {
+                    output.append(byteSpan(source, index, end + 2))
+                } else {
+                    output.append(" ")
+                    String comment = byteSpan(source, index + 2, end)
+                    int64 ci = 0
+                    while (ci < comment.length) {
+                        if (byte(comment, ci) == 10) {
+                            output.append("\n")
+                        }
+                        ci = ci + 1
                     }
-                    ci = ci + 1
                 }
                 index = end + 2
                 handled = true
@@ -1648,11 +1668,13 @@ class Processor {
         io.writeLine("cmacros: v1.0")
         io.writeLine("Cwhip macro processor")
         io.writeLine("")
-        io.writeLine("Usage: cmacros [options] input")
+        io.writeLine("Usage: cmacros [options] [input]")
         io.writeLine("")
+        io.writeLine("  input        Source file, or - for stdin (default: stdin)")
         io.writeLine("  -I DIR       Add a directory to the import search path")
         io.writeLine("  -D NAME[=V]  Define a command-line macro")
-        io.writeLine("  -o FILE      Write output to FILE (default: stdout)")
+        io.writeLine("  -o FILE      Write output to FILE, or - for stdout (default: stdout)")
+        io.writeLine("  -k           Keep // and /* */ comments in the output")
         io.writeLine("  -v N         Set verbosity (accepted for compatibility)")
         io.writeLine("  -h, --help   Show this help")
         io.writeLine("  -V, --version Show the version")
@@ -1730,6 +1752,13 @@ start {
     // Keep each -D argument intact so NAME=value stays one definition.
     define.listSeparator = "\n"
     commandLine.addOption(define)
+    Cli.Option keepComments = Cli.Option()
+    keepComments.shortName = "k"
+    keepComments.longName = "keep-comments"
+    keepComments.name = "keep-comments"
+    keepComments.description = "keep // and /* */ comments in the output"
+    keepComments.valueType = Cli.ValueType().FLAG
+    commandLine.addOption(keepComments)
     Cli.Option verbosity = Cli.Option()
     verbosity.shortName = "v"
     verbosity.longName = "verbosity"
@@ -1739,8 +1768,8 @@ start {
     commandLine.addOption(verbosity)
     Cli.Positional inputPos = Cli.Positional()
     inputPos.name = "input"
-    inputPos.description = "source file"
-    inputPos.required = true
+    inputPos.description = "source file, or - for stdin (default: stdin)"
+    inputPos.required = false
     commandLine.addPositional(inputPos)
 
     String problem = ""
@@ -1766,9 +1795,6 @@ start {
         if (problem.startsWith("option --verbosity requires") or problem.startsWith("option -v requires")) {
             problem = "option -v requires a non-negative number"
         }
-        if (problem.startsWith("required argument not found")) {
-            problem = "an input file is required"
-        }
         if (problem.startsWith("unexpected positional")) {
             problem = "only one input file may be specified"
         }
@@ -1781,23 +1807,26 @@ start {
         io.writeLine("cmacros: v1.0")
         process.exit(0)
     }
-    if (problem.length > 0 or commandLine.allPositionalValues().length != 1) {
+    if (problem.length > 0 or commandLine.allPositionalValues().length > 1) {
         if (problem.length == 0) {
-            if (commandLine.allPositionalValues().length == 0) {
-                problem = "an input file is required"
-            } else {
-                problem = "only one input file may be specified"
-            }
+            problem = "only one input file may be specified"
         }
         io.writeErrorLine(format("cmacros: error[CMACRO0001]: {}", problem))
         io.writeErrorLine("Try 'cmacros --help' for usage.")
         process.exit(2)
     }
-    String input = commandLine.allPositionalValues()[0] as String
+    String input = ""
+    if (commandLine.allPositionalValues().length == 1) {
+        input = commandLine.allPositionalValues()[0] as String
+    }
     String outputPath = ""
     if (commandLine.wasProvided("output")) {
         outputPath = commandLine.value("output")
     }
+    if (outputPath.equals("-")) {
+        outputPath = ""
+    }
+    bool fromStdin = input.length == 0 or input.equals("-")
     list paths = commandLine.valuesFor("include")
     list definitions = commandLine.valuesFor("define")
     String macroPath = process.getEnv("MACRO_PATH")
@@ -1809,18 +1838,34 @@ start {
             item = item + 1
         }
     }
-    String absoluteInput = Sys.FileSystem().absolutePath(input)
-    if (absoluteInput.length == 0 and Sys.FileSystem().isFile(format("{}.txt", input))) {
-        input = format("{}.txt", input)
-    }
-    if (absoluteInput.length > 0) {
-        input = absoluteInput
-    }
-    if (not Sys.FileSystem().isFile(input)) {
-        io.writeErrorLine(format("cmacros: error[CMACRO2000]: cannot open input '{}'", input))
-        process.exit(1)
-    }
     Processor processor = Processor(paths)
+    processor.keepComments = commandLine.switchValue("keep-comments")
+    if (fromStdin) {
+        String content = ""
+        String chunk = io.read(65536)
+        while (chunk.length > 0) {
+            content.append(chunk)
+            if (content.length > 16777216) {
+                io.writeErrorLine("cmacros: error[CMACRO2001]: input exceeds the 16 MiB source limit")
+                process.exit(1)
+            }
+            chunk = io.read(65536)
+        }
+        input = "<stdin>"
+        processor.cacheSource(input, content)
+    } else {
+        String absoluteInput = Sys.FileSystem().absolutePath(input)
+        if (absoluteInput.length == 0 and Sys.FileSystem().isFile(format("{}.txt", input))) {
+            input = format("{}.txt", input)
+        }
+        if (absoluteInput.length > 0) {
+            input = absoluteInput
+        }
+        if (not Sys.FileSystem().isFile(input)) {
+            io.writeErrorLine(format("cmacros: error[CMACRO2000]: cannot open input '{}'", input))
+            process.exit(1)
+        }
+    }
     int64 definitionIndex = 0
     while (definitionIndex < definitions.length) {
         String definition = definitions[definitionIndex] as String
