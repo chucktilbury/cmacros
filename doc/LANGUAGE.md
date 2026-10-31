@@ -20,6 +20,7 @@ letters, digits, or underscores. Names are case-sensitive.
 .define NAME
 .define NAME {replacement text}
 .define NAME(first, second) {replacement text using @first and @second}
+.undef NAME
 ```
 
 The braced replacement may span lines and contain nested braces. Quotes and
@@ -28,6 +29,11 @@ no body is an empty object-like macro. Parameterized definitions require a
 braced body. Parameter names must be unique and non-empty. A repeated
 definition is accepted only when its body, parameter names, and definition
 kind match the existing definition; a conflicting definition is an error.
+`.undef NAME` removes a definition; an unknown name is an error. Definitions
+and removals persist across the processor's repeated passes, while each pass
+rescans the original input. A `.define` that remains in the scanned source can
+therefore recreate a name that `.undef` removed on a prior pass; conditional
+guards around define/undef control that stickiness.
 
 Use `@NAME` to expand an object-like macro and `@NAME(arguments)` to expand a
 parameterized macro. A zero-parameter definition may be referenced with or
@@ -44,9 +50,9 @@ may itself contain macro references.
 
 Unresolved `@NAME` references in ordinary text are copied unchanged. In
 macro bodies, references matching declared parameters substitute argument
-text; other names use normal macro-reference resolution. Undefined names in
-conditional expressions evaluate to false. Macro calls are expanded
-recursively and detected cycles are errors.
+text; other names use normal macro-reference resolution. In conditions, a
+bare undefined name is false; an `@NAME` that is undefined is also false.
+Macro calls are expanded recursively and detected cycles are errors.
 
 ## Imports
 
@@ -76,11 +82,20 @@ Conditions and bodies are required to be parenthesized and braced as shown.
 Each conditional selects the first matching branch. A final `.else` without
 an expression is the fallback. Conditional directives may be nested.
 
-Names test whether a macro is defined: a defined name is true even when its
-replacement is empty; an undefined name is false. `@NAME` evaluates the
-expanded replacement: empty text and numeric zero are false, non-empty
-non-numeric text is true. Decimal integer literals use the same zero/nonzero
-truth rule. `true` and `false` are accepted case-insensitively.
+Conditional operands follow this matrix:
+
+| Form | Meaning |
+| --- | --- |
+| `NAME` | true when `NAME` is defined (even if the replacement is empty) |
+| `@NAME` / `@NAME(args)` | true when `NAME` is defined and its expansion is nonempty |
+| `NAME == OTHER` / `!=` | true when both names have the same definedness |
+| `@A == @B` / `!=` | compares expanded text; if both sides are decimal integers, compares them numerically |
+| mixed `@` and bare name in one comparison | hard error |
+
+Decimal integer literals use a zero/nonzero truth rule when used alone.
+`true` and `false` are accepted case-insensitively. Relational operators
+(`<`, `>`, `<=`, `>=`, and word forms) apply to numeric content operands only,
+not to bare-name definedness operands.
 
 The supported operators, from lowest to highest precedence, are:
 
@@ -93,9 +108,7 @@ The supported operators, from lowest to highest precedence, are:
 | unary | `!`, `NOT` |
 | grouping | `( expression )` |
 
-Operators are case-insensitive when written as words. Decimal operands are
-compared as arbitrary-length signed integers. Other comparison operands are
-compared by truth value (false before true), not lexically. All operands are
+Operators are case-insensitive when written as words. All operands are
 evaluated; logical operators do not short-circuit. Malformed expressions
 produce source diagnostics rather than silently choosing a branch.
 

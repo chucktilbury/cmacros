@@ -97,6 +97,68 @@ def test_expansion_and_comments(root):
             f"-o - stdout mismatch: {result!r}")
 
 
+def test_undef_and_expression_matrix(root):
+    source = root / "undef.cw"
+    source.write_text(
+        ".define TEMP {gone}\n"
+        ".undef TEMP\n"
+        ".if (TEMP) {still defined}\n"
+        ".else {removed}\n"
+        ".define KEEP {1}\n"
+        ".undef MISSING\n",
+        encoding="utf-8",
+    )
+    result = invoke(source)
+    require(result.returncode == 1 and "CMACRO1000" in result.stderr and
+            "not defined" in result.stderr,
+            f".undef unknown name failed: {result!r}")
+
+    source.write_text(
+        ".define EMPTY {}\n"
+        ".define ZERO {0}\n"
+        ".define TEXT {abc}\n"
+        ".if (EMPTY) {empty-defined}\n"
+        ".if (@EMPTY) {empty-at}\n"
+        ".if (@ZERO) {zero-at}\n"
+        ".if (@TEXT) {text-at}\n"
+        ".if (EMPTY == ZERO) {same-definedness}\n"
+        ".if (@TEXT == @TEXT) {same-text}\n"
+        ".if (@TEXT == @ZERO) {different-text}\n"
+        ".if (EMPTY == @ZERO) {mixed}\n",
+        encoding="utf-8",
+    )
+    result = invoke(source)
+    require(result.returncode == 1 and "CMACRO1009" in result.stderr and
+            "cannot mix @ and bare" in result.stderr,
+            f"mixed comparison diagnostic failed: {result!r}")
+
+    source.write_text(
+        ".define EMPTY {}\n"
+        ".define ZERO {0}\n"
+        ".define TEXT {abc}\n"
+        ".if (EMPTY) {empty-defined}\n"
+        ".if (@EMPTY) {empty-at}\n"
+        ".if (@ZERO) {zero-at}\n"
+        ".if (@TEXT) {text-at}\n"
+        ".if (EMPTY == ZERO) {same-definedness}\n"
+        ".if (MISSING == ABSENT) {both-undefined}\n"
+        ".if (@TEXT == @TEXT) {same-text}\n"
+        ".if (@TEXT != @ZERO) {different-text}\n",
+        encoding="utf-8",
+    )
+    result = invoke(source)
+    require(result.returncode == 0 and
+            "empty-defined" in result.stdout and
+            "empty-at" not in result.stdout and
+            "zero-at" in result.stdout and
+            "text-at" in result.stdout and
+            "same-definedness" in result.stdout and
+            "both-undefined" in result.stdout and
+            "same-text" in result.stdout and
+            "different-text" in result.stdout,
+            f"expression matrix failed: {result!r}")
+
+
 def test_forward_references_and_conditionals(root):
     source = root / "conditional.cw"
     source.write_text(
@@ -370,6 +432,7 @@ def main():
         root = Path(directory)
         test_cli_basics(root)
         test_expansion_and_comments(root)
+        test_undef_and_expression_matrix(root)
         test_forward_references_and_conditionals(root)
         test_cli_defines_and_output(root)
         test_import_search_and_cycles(root)

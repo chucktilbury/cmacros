@@ -22,7 +22,7 @@ unexpected or cleanup failures. `cmacros` currently uses:
 | Code(s) | Meaning |
 | --- | --- |
 | 0001 | Usage, missing input, or invalid command-line option |
-| 1000-1009 | Invalid directive/definition, expansion depth or cycle, `.error`, macro call/arity, malformed conditional, or misplaced `.else` |
+| 1000-1009 | Invalid directive/definition (including `.undef` of an unknown name), expansion depth or cycle, `.error`, macro call/arity, malformed conditional (including mixed `@`/bare comparisons), or misplaced `.else` |
 | 2000-2009 | Input/output failure, source/work/import/output limits, import lookup/cycle, or non-convergent passes |
 
 The implementation has no subprocess or transport phase, so 3000-3999 is

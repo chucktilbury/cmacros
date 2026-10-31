@@ -211,6 +211,47 @@ class Processor {
         return(null)
     }
 
+    void removeDefinition(String name, String file, int64 line, int64 column) {
+        if (not validName(name)) {
+            report(1000, file, line, column,
+                   format("invalid macro name '{}'", name))
+            return
+        }
+        int64 index = 0
+        while (index < macros.length) {
+            Macro macro = macros[index] as Macro
+            if (macro.name.equals(name)) {
+                macros.remove(index..index)
+                return
+            }
+            index = index + 1
+        }
+        report(1000, file, line, column,
+               format("macro '{}' is not defined", name))
+    }
+
+    bool isDefinednessOperand(String expression) {
+        String value = expression.trim()
+        if (value.length == 0 or value.startsWith("@")) {
+            return(false)
+        }
+        if (decimalNumber(value)) {
+            return(false)
+        }
+        String upper = value.toUpper()
+        if (upper.equals("TRUE") or upper.equals("FALSE")) {
+            return(false)
+        }
+        if (nameStart(byte(value, 0)) and nameEnd(value, 0) == value.length) {
+            return(true)
+        }
+        return(false)
+    }
+
+    bool isAtOperand(String expression) {
+        return(expression.trim().startsWith("@"))
+    }
+
     int64 findParameter(list names, String name) {
         int64 index = 0
         while (index < names.length) {
@@ -897,11 +938,36 @@ class Processor {
         if (value.toUpper().equals("FALSE")) {
             return(false)
         }
-        if (not decimalNumber(value) and not value.startsWith("@") and (not nameStart(byte(value, 0)) or nameEnd(value, 0) != value.length)) {
-            conditionError("invalid token in conditional expression")
+        if (value.startsWith("@")) {
+            return(atReferenceDefinedNonempty(value, recursion + 1))
+        }
+        if (decimalNumber(value)) {
+            return(valueTruth(value))
+        }
+        if (value.length > 0 and nameStart(byte(value, 0)) and nameEnd(value, 0) == value.length) {
+            return(findMacro(value) != null)
+        }
+        conditionError("invalid token in conditional expression")
+        return(false)
+    }
+
+    bool atReferenceDefinedNonempty(String expression, int64 recursion) {
+        String value = expression.trim()
+        int64 end = nameEnd(value, 1)
+        if (end == 1) {
+            conditionError("expected a macro name after @")
             return(false)
         }
-        return(valueTruth(resolveConditionValue(value, recursion + 1)))
+        String name = byteSpan(value, 1, end)
+        Macro macro = findMacro(name)
+        if (macro == null) {
+            return(false)
+        }
+        String expanded = resolveConditionValue(value, recursion)
+        if (failed) {
+            return(false)
+        }
+        return(expanded.length > 0)
     }
 
     String resolveConditionValue(String expression, int64 recursion) {
@@ -980,8 +1046,38 @@ class Processor {
     }
 
     bool compareCondition(String leftExpression, String rightExpression, String operator) {
+        bool leftDefinedness = isDefinednessOperand(leftExpression)
+        bool rightDefinedness = isDefinednessOperand(rightExpression)
+        bool leftAt = isAtOperand(leftExpression)
+        bool rightAt = isAtOperand(rightExpression)
+        if ((leftAt and rightDefinedness) or (leftDefinedness and rightAt)) {
+            conditionError("cannot mix @ and bare names in a comparison")
+            return(false)
+        }
+        if (leftDefinedness != rightDefinedness) {
+            conditionError("cannot mix bare names and value operands in a comparison")
+            return(false)
+        }
+        String upper = operator.toUpper()
+        bool equality = upper.equals("==") or upper.equals("EQ") or upper.equals("!=") or upper.equals("NEQ")
+        if (leftDefinedness and rightDefinedness) {
+            if (not equality) {
+                conditionError("bare names only support == and != comparisons")
+                return(false)
+            }
+            bool leftDefined = findMacro(leftExpression.trim()) != null
+            bool rightDefined = findMacro(rightExpression.trim()) != null
+            bool equal = leftDefined == rightDefined
+            if (upper.equals("==") or upper.equals("EQ")) {
+                return(equal)
+            }
+            return(not equal)
+        }
         String left = resolveConditionValue(leftExpression, 0)
         String right = resolveConditionValue(rightExpression, 0)
+        if (failed) {
+            return(false)
+        }
         bool equal = false
         bool less = false
         bool greater = false
@@ -991,13 +1087,13 @@ class Processor {
             less = comparison < 0
             greater = comparison > 0
         } else {
-            bool leftBool = valueTruth(left)
-            bool rightBool = valueTruth(right)
-            equal = leftBool == rightBool
-            less = not leftBool and rightBool
-            greater = leftBool and not rightBool
+            if (not equality) {
+                // Non-numeric relational results are false so forward
+                // references in conditions can settle on later passes.
+                return(false)
+            }
+            equal = left.equals(right)
         }
-        String upper = operator.toUpper()
         if (upper.equals("==") or upper.equals("EQ")) {
             return(equal)
         }
@@ -1416,6 +1512,17 @@ class Processor {
                                   columnAfter(source, startIndex, cursor + 1, column),
                                   parameters, functionLike)
                 } else {
+                if (directive.equals("undef")) {
+                    int64 nameStop = nameEnd(source, argumentStart)
+                    if (nameStop == argumentStart) {
+                        report(1000, file, line, column,
+                               "expected a macro name after .undef")
+                        break
+                    }
+                    String undefName = byteSpan(source, argumentStart, nameStop)
+                    removeDefinition(undefName, file, line, column)
+                    index = nameStop
+                } else {
                     if (directive.equals("import") or directive.equals("include")) {
                     if (byte(source, argumentStart) != 34) {
                         report(1000, file, line, column,
@@ -1462,6 +1569,7 @@ class Processor {
                         index = index + 1
                     }
                     }
+                }
                 }
                 }
                 }
