@@ -34,9 +34,24 @@ def test_cli_basics(root):
     result = invoke("--help")
     require(result.returncode == 0 and "Usage: cmacros" in result.stdout,
             f"help output mismatch: {result!r}")
-    result = invoke()
-    require(result.returncode == 2 and "CMACRO0001" in result.stderr,
-            f"missing-input diagnostic mismatch: {result!r}")
+    result = subprocess.run(
+        [str(EXECUTABLE)],
+        input=".define HI {hello}\n@HI\n",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    require(result.returncode == 0 and result.stdout == "\nhello\n",
+            f"stdin default mismatch: {result!r}")
+    result = subprocess.run(
+        [str(EXECUTABLE), "-"],
+        input=".define HI {hello}\n@HI\n",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    require(result.returncode == 0 and result.stdout == "\nhello\n",
+            f"stdin '-' mismatch: {result!r}")
     result = invoke(root / "does not exist.cw")
     require(result.returncode == 1 and "CMACRO2000" in result.stderr,
             f"missing-file operational diagnostic mismatch: {result!r}")
@@ -59,6 +74,27 @@ def test_expansion_and_comments(root):
                 "@escaped \n \ntail\n")
     require(result.returncode == 0 and result.stdout == expected,
             f"expansion/comment mismatch:\nexpected={expected!r}\nactual={result!r}")
+    result = invoke("-k", source)
+    kept = ("\n\nleft,side-forward\n"
+            "\"forward // quoted text\" forward\n"
+            "@escaped // @VALUE must not expand\n"
+            "/* hidden @VALUE\nstill hidden */tail\n")
+    require(result.returncode == 0 and result.stdout == kept,
+            f"keep-comments mismatch:\nexpected={kept!r}\nactual={result!r}")
+    output = root / "from-stdin.txt"
+    result = subprocess.run(
+        [str(EXECUTABLE), "-o", str(output)],
+        input=".define HI {hello}\n@HI\n",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    require(result.returncode == 0 and result.stdout == "" and
+            output.read_text(encoding="utf-8") == "\nhello\n",
+            f"stdin with -o mismatch: {result!r}")
+    result = invoke("-o", "-", source)
+    require(result.returncode == 0 and result.stdout == expected,
+            f"-o - stdout mismatch: {result!r}")
 
 
 def test_forward_references_and_conditionals(root):

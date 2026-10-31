@@ -1,9 +1,10 @@
 # Command-line usage
 
 `cmacros` is a standalone command-line macro processor implemented in Cwhip.
-It reads one UTF-8 source file, expands macros and directives in memory, then
-writes the completed result to standard output or a selected file. The
-processor does not invoke a shell, compiler, or other subprocess.
+It reads one UTF-8 source from a file or standard input, expands macros and
+directives in memory, then writes the completed result to standard output or a
+selected file. The processor does not invoke a shell, compiler, or other
+subprocess.
 
 See [Build and installation](BUILD.md) for requirements, SDK discovery,
 build commands, and installation.
@@ -11,22 +12,31 @@ build commands, and installation.
 ## Usage
 
 ```text
-cmacros [options] input
+cmacros [options] [input]
 ```
 
 ```sh
 cmacros source.c
 cmacros -I include -DPLATFORM=unix -o generated.c source.c
 MACRO_PATH=shared:vendor cmacros --include=local source.c
+cmacros -o generated.c < source.c
+printf '.define X {ok}\n@X\n' | cmacros -
+cmacros -k source.c
 ```
 
-`-I DIR` adds import directories in the order supplied; a colon-separated
-value is also accepted. `-D NAME[=VALUE]` defines a macro before reading the
-input; an omitted value is empty. `-o FILE` stages output beside the
-destination and replaces it only after successful processing. Without `-o`,
-the completed result is written to standard output. `--help` and `--version`
-print to standard output. The legacy `-v N` option is accepted and ignored.
-See [Language reference](LANGUAGE.md) for the language contract and
+`input` is optional. When omitted, or when it is `-`, source text is read from
+standard input (including when `-o` selects an output file). A real input path
+and `-` are mutually exclusive because only one input may be given. `-I DIR`
+adds import directories in the order supplied; a colon-separated value is also
+accepted. `-D NAME[=VALUE]` defines a macro before reading the input; an
+omitted value is empty. `-o FILE` stages output beside the destination and
+replaces it only after successful processing. Without `-o`, or with `-o -`,
+the completed result is written to standard output. `-` as an output path means
+stdout and cannot name a real file. `-k` / `--keep-comments` leaves `//` and
+`/* */` comment text in the output; by default those forms are stripped outside
+quoted literals with no language-specific context rules. `--help` and
+`--version` print to standard output. The legacy `-v N` option is accepted and
+ignored. See [Language reference](LANGUAGE.md) for the language contract and
 [Diagnostics](DIAGNOSTICS.md) for errors and processing limits.
 
 ## Original examples

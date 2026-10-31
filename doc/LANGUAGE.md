@@ -112,7 +112,9 @@ participate in later passes.
 During text expansion, outside quoted literals, `//` comments run to (but do
 not consume) the next line feed. `/* ... */` comments are replaced by one
 space; any line feeds inside a block comment are preserved. An unterminated
-block comment is an error.
+block comment is an error. With `-k` / `--keep-comments`, those comment forms
+are left in the output unchanged; recognition is not language-context
+sensitive beyond the existing quoted-literal rules.
 
 Single- and double-quoted literals protect comment openers and directive
 syntax. Macro references inside a quoted literal are still expanded, matching
@@ -126,8 +128,10 @@ characters do not end a literal. An unclosed quoted literal is an error.
 `.message "message"` writes a message to standard error and continues.
 Unknown dot-prefixed text is preserved as ordinary output.
 
-Input is fully processed before any result is written. Standard output is
-therefore empty on a processing error. For `-o`, a sibling temporary file is
-written and renamed into place only after success; a pre-existing output is
-not touched when source processing fails. Text is preserved as UTF-8, with
-CRLF/LF line endings retained.
+Input is fully processed before any result is written. When no input path is
+given, or the path is `-`, the source is standard input (even with `-o`).
+Standard output is empty on a processing error unless writing the completed
+result there. For a real `-o` path, a sibling temporary file is written and
+renamed into place only after success; a pre-existing output is not touched
+when source processing fails. `-o -` means standard output. Text is preserved
+as UTF-8, with CRLF/LF line endings retained.
