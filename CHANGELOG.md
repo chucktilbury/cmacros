@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Route argv parsing through the SDK `cli` 0.1.0 package while keeping the
+  custom `--help` / `--version` text and CMACRO0001 usage diagnostics.
 - Read source bytes with `text[index]` and copy half-open spans through an
   inclusive range. Empty spans stay empty. `String.byteAt` and `String.slice`
   are no longer SDK methods. The macro input language is unchanged.
