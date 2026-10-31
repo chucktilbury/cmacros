@@ -60,6 +60,7 @@ if(NOT Cwhip_APPLICATION_OUTPUT_DIRECTORIES)
         "The selected Cwhip SDK does not support configurable application output directories.")
 endif()
 
+# Entry point includes types.cw, processor.cw, conditions.cw, and io.cw from src/.
 cwhip_add_program(cmacros
     SOURCE "${PROJECT_SOURCE_DIR}/src/main.cw"
     OUTPUT_DIRECTORY "${CWHIP_BIN_DIR}")
