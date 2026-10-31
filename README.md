@@ -1,6 +1,8 @@
 # cmacros
 
 `cmacros` is a standalone command-line macro processor implemented in Cwhip.
+Source: [github.com/chucktilbury/cmacros](https://github.com/chucktilbury/cmacros).
+
 This directory contains the implementation in `src/`, regression tests in
 `tests/`, macro examples in `examples/`, and build helpers in `scripts/`.
 
@@ -14,3 +16,7 @@ running setup again. See the build guide for SDK selection and installation.
 - [Macro language](doc/LANGUAGE.md)
 - [Examples and generated Cwhip syntax](doc/EXAMPLES.md)
 - [Diagnostics and processing limits](doc/DIAGNOSTICS.md)
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
